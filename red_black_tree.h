@@ -194,9 +194,9 @@ private:
             Node* grand_parent = itr->parent->parent;
             Node* uncle = (itr->parent->parent->left == itr->parent?itr->parent->parent->right: itr->parent->parent->left);
             if(uncle == nullptr || uncle->color == Color::BLACK){
-                if(itr == grand_parent->left->right){
+                if(grand_parent->left && itr == grand_parent->left->right){
                     rotate_left(grand_parent);
-                }else if(itr == grand_parent->right->left){
+                }else if(grand_parent->right && itr == grand_parent->right->left){
                     rotate_right(grand_parent);
                 }
                 if(itr->parent->right == itr){
@@ -206,6 +206,7 @@ private:
                 }
                 grand_parent->color = Color::RED;
                 grand_parent->parent->color = Color::BLACK;
+                m_root->color = Color::BLACK;
             }else{
                 uncle->color = itr->parent->color = Color::BLACK;
                 grand_parent->color = Color::RED;
@@ -216,9 +217,9 @@ private:
             Node* grand_parent = itr->parent->parent;
             Node* uncle = (itr->parent->parent->left == itr->parent?itr->parent->parent->right: itr->parent->parent->left);
             if(uncle == nullptr || uncle->color == Color::BLACK){
-                if(itr == grand_parent->left->right){
+                if(grand_parent->left && itr == grand_parent->left->right){
                     rotate_left(itr->parent);
-                }else if(itr == grand_parent->right->left){
+                }else if(grand_parent->right && itr == grand_parent->right->left){
                     rotate_right(itr->parent);
                 }
                 if(itr->parent->right == itr){
