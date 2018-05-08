@@ -54,7 +54,17 @@ class red_black_tree{
             return itr;
         }
         typename red_black_tree::Node* ptr_end  (typename red_black_tree::Node* itr){
-            return itr? itr->parent:itr;
+            if(itr){
+                bool not_found = true;
+                while(not_found && itr->parent){
+                    if(itr->parent->right!=itr && itr->parent->right){
+                        itr = itr->parent->right;
+                        not_found = false;
+                    }else itr = itr->parent;
+                }
+                if(not_found)itr = nullptr;
+            }
+            return itr;
         }
         void operator()(typename red_black_tree::Node*& itr){
             if(itr){
@@ -79,7 +89,15 @@ class red_black_tree{
             return itr;
         }
         typename red_black_tree::Node* ptr_end  (typename red_black_tree::Node* itr){
-            return itr? itr->parent:itr;
+            if(itr){
+                bool not_found = true;
+                while(not_found && itr->parent){
+                    if(itr->parent->right!=itr)not_found = false;
+                    itr = itr->parent;
+                }
+                if(not_found) itr = nullptr;
+            }
+            return itr;
         }
         void operator()(typename red_black_tree::Node*& itr){
             if(itr){
