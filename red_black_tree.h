@@ -207,6 +207,19 @@ public:
     bool erase(iterator<_tr> itr){
         return erase_by_node_ptr(itr->m_ptr);
     }
+    void buta_kiir(Node* itr,int szam=1){
+        if(itr){
+            buta_kiir(itr->left,szam+1);
+            std::cout<<std::string(szam,' ')<<itr->m_data.first<<","<<(itr->color==Color::BLACK?"black":"red");
+            if(itr->parent){
+                std::cout<<". szulo: "<<itr->parent->m_data.first;
+            }std::cout<<std::endl;
+            buta_kiir(itr->right,szam+1);
+        }
+    }
+    Node* root(){
+        return m_root;
+    }
     red_black_tree():m_root(nullptr),m_size(0) {}
 
     ~red_black_tree() {
@@ -351,13 +364,13 @@ private:
             if(sibling->color == Color::RED){
                 sibling->color = Color::BLACK;
                 if(itr = itr->parent->left){
-                    rotate_left(itr);
+                    rotate_left(itr->parent);
                 }else{
-                    rotate_right(itr);
+                    rotate_right(itr->parent);
                 }
                 itr->parent->color = Color::RED;
                 repair_recurse(itr);
-            }else{
+            }else if(sibling->left && sibling->right){
                 Node* parent = itr->parent;
                 if(parent->color == Color::RED){
                     parent->color = Color::BLACK;
@@ -443,7 +456,11 @@ private:
                 t_parent->right->parent = t_parent;
             }
             if(balanced_sub_tree.second){
-                repair_recurse(balanced_sub_tree.first);
+                Node* temp = balanced_sub_tree.first;
+                Node* sibling = (temp->parent->left==temp?temp->parent->right:temp->parent->left);
+                if(sibling->right && sibling->left){
+                    repair_recurse(temp);
+                }
             }
         }else{
             m_root = balanced_sub_tree.first;
