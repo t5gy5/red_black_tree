@@ -207,19 +207,7 @@ public:
     bool erase(iterator<_tr> itr){
         return erase_by_node_ptr(itr->m_ptr);
     }
-    void buta_kiir(Node* itr,int szam=1){
-        if(itr){
-            buta_kiir(itr->left,szam+1);
-            std::cout<<std::string(szam,' ')<<itr->m_data.first<<","<<(itr->color==Color::BLACK?"black":"red");
-            if(itr->parent){
-                std::cout<<". szulo: "<<itr->parent->m_data.first;
-            }std::cout<<std::endl;
-            buta_kiir(itr->right,szam+1);
-        }
-    }
-    Node* root(){
-        return m_root;
-    }
+
     red_black_tree():m_root(nullptr),m_size(0) {}
 
     ~red_black_tree() {
