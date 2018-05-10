@@ -308,9 +308,9 @@ private:
         bool should_repair_further = false;
         switch(node_count){
         case 2:
+            should_repair_further = (node_ptr_arr[0]->color==node_ptr_arr[1]->color); 
             node_ptr_arr[0]->color = Color::BLACK;
             node_ptr_arr[1]->color = Color::RED;
-            should_repair_further = true;
             break;
         case 3:
             node_ptr_arr[1]->color = itr->color;
@@ -342,7 +342,7 @@ private:
             node_ptr_arr[4]->color = node_ptr_arr[6]->color = Color::BLACK;
             node_ptr_arr[1]->color = node_ptr_arr[5]->color = node_ptr_arr[7]->color = Color::RED;
             break;
-            default: std::cout<<"\nHIBA!\n";
+            default: std::cout<<"\nError!\n";
         }
         return std::make_pair(construct_sub_tree_from(node_ptr_arr,0,node_count-1),should_repair_further);
     }
@@ -357,8 +357,12 @@ private:
                     rotate_right(itr->parent);
                 }
                 itr->parent->color = Color::RED;
-                repair_recurse(itr);
-            }else if(sibling->left && sibling->right){
+                sibling = (itr->parent->left==itr? itr->parent->right:itr->parent->left);
+                if(sibling->left && sibling->right){
+                    repair_recurse(itr);
+                }
+                //repair_recurse(itr);
+            }else /*if(sibling->left && sibling->right)*/{
                 Node* parent = itr->parent;
                 if(parent->color == Color::RED){
                     parent->color = Color::BLACK;
@@ -444,11 +448,12 @@ private:
                 t_parent->right->parent = t_parent;
             }
             if(balanced_sub_tree.second){
-                Node* temp = balanced_sub_tree.first;
+                /*Node* temp = balanced_sub_tree.first;
                 Node* sibling = (temp->parent->left==temp?temp->parent->right:temp->parent->left);
                 if(sibling->right && sibling->left){
                     repair_recurse(temp);
-                }
+                }*/
+                repair_recurse(balanced_sub_tree.first);
             }
         }else{
             m_root = balanced_sub_tree.first;
