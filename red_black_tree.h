@@ -258,12 +258,279 @@ private:
             itr->color == Color::BLACK;
         }
     }
+    typename red_black_tree::Node* construct_sub_tree_from(typename red_black_tree::Node* arr[8],int left,int right){
+        if(left == right){
+            arr[left]->left = arr[left]->right = nullptr;
+            return arr[left];
+        }
+        int middle = (left+right)/2;
+        Node* center = arr[middle];
+        if(left != middle){
+            center->left = construct_sub_tree_from(arr,left,middle-1);
+            center->left->parent = center;
+        }else{
+            center->left = nullptr;
+        }
+        center->right = construct_sub_tree_from(arr,middle+1,right);
+        center->right->parent = center;
+
+        return center;
+
+    }
+    std::pair<typename red_black_tree::Node*,bool> pre_balance(typename red_black_tree::Node* itr){
+        Node* node_ptr_arr[8];
+        Advance_ptr<true,Traversal::IN_ORDER> advance;
+        Node* ptr_end = advance.ptr_end(itr);
+        unsigned node_count = 0;
+        while(itr != ptr_end){
+            node_ptr_arr[node_count++] = itr;
+            advance(itr);
+        }
+        bool should_repair_further = false;
+        switch(node_count){
+        case 2:
+            node_ptr_arr[0]->color = Color::BLACK;
+            node_ptr_arr[1]->color = Color::RED;
+            should_repair_further = true;
+            break;
+        case 3:
+            node_ptr_arr[0]->color = node_ptr_arr[1]->color = node_ptr_arr[2]->color = Color::BLACK;
+            break;
+        case 4:
+            if( (itr->parent->right == itr? itr->parent->left:itr->parent->right)->color == Color::RED ){
+                node_ptr_arr[0]->color = node_ptr_arr[1]->color = node_ptr_arr[3]->color = Color::BLACK;
+                node_ptr_arr[2]->color = Color::RED;
+            }else{
+                node_ptr_arr[0]->color = node_ptr_arr[1]->color = node_ptr_arr[2]->color = Color::BLACK;
+                node_ptr_arr[3]->color = Color::RED;
+            }
+            break;
+        case 5:
+            node_ptr_arr[0]->color = node_ptr_arr[2]->color = node_ptr_arr[3]->color = Color::BLACK;
+            node_ptr_arr[1]->color = node_ptr_arr[4]->color = Color::RED;
+            break;
+        case 6:
+            node_ptr_arr[0]->color = node_ptr_arr[2]->color = node_ptr_arr[3]->color = node_ptr_arr[5]->color = Color::BLACK;
+            node_ptr_arr[1]->color = node_ptr_arr[4]->color = Color::RED;
+            break;
+        case 7:
+            node_ptr_arr[0]->color = node_ptr_arr[2]->color = node_ptr_arr[3]->color = node_ptr_arr[5]->color = Color::BLACK;
+            node_ptr_arr[1]->color = node_ptr_arr[4]->color = node_ptr_arr[6]->color = Color::RED;
+            break;
+        case 8:
+            node_ptr_arr[0]->color = node_ptr_arr[2]->color = node_ptr_arr[3]->color =
+            node_ptr_arr[4]->color = node_ptr_arr[6]->color = Color::BLACK;
+            node_ptr_arr[1]->color = node_ptr_arr[5]->color = node_ptr_arr[7]->color = Color::RED;
+            default: std::cout<<"\nHIBA!\n";
+        }
+        return std::make_pair(construct_sub_tree_from(node_ptr_arr,0,7),should_repair_further);
+    }
+    void repair_recurse(typename red_black_tree::Node* itr){
+        if(itr->parent!=nullptr){
+            Node* sibling = (itr->parent->left==itr? itr->parent->right:itr->parent->left);
+            if(sibling->color == Color::RED){
+                sibling->color = Color::BLACK;
+                if(itr = itr->parent->left){
+                    rotate_left(itr);
+                }else{
+                    rotate_right(itr);
+                }
+                itr->parent->color = Color::RED;
+                repair_recurse(itr);
+            }else{
+                Node* parent = itr->parent;
+                if(parent->color == Color::RED){
+                    parent->color = Color::BLACK;
+                    if(sibling->left->color == Color::BLACK && sibling->right->color == Color::BLACK){
+                        sibling->color= Color::RED;
+                    }else if(sibling->left->color == Color::RED){
+                        if(itr == itr->parent->left){
+                            rotate_right(sibling);
+                            rotate_left(itr->parent);
+                        }else{
+                            sibling->color = Color::RED;
+                            sibling->left->color = Color::BLACK;
+                            rotate_right(parent);
+                        }
+                    }else if(sibling->right->color == Color::RED){
+                        if(itr == itr->parent->left){
+                            sibling->color = Color::RED;
+                            sibling->right->color = Color::BLACK;
+                            rotate_left(parent);
+                        }else{
+                            rotate_left(sibling);
+                            rotate_right(itr->parent);
+                        }
+                    }else{
+                        if(itr == itr->parent->right){
+                            rotate_right(itr->parent);
+                        }else{
+                            rotate_left(itr->parent);
+                        }
+                        sibling->color = Color::RED;
+                        sibling->left->color = sibling->right->color = Color::BLACK;
+                    }
+                }else{
+                    if(sibling->left->color == Color::BLACK && sibling->right->color == Color::BLACK){
+                        sibling->color = Color::RED;
+                        repair_recurse(itr->parent);
+                    }else if(sibling->left->color == Color::RED){
+                        if(itr == itr->parent->left){
+                            itr->parent->color = Color::BLACK;
+                            rotate_right(sibling);
+                            rotate_left(itr->parent);
+                            sibling->parent->color = Color::BLACK;
+                        }else{
+                            sibling->left->color = Color::BLACK;
+                            rotate_right(itr->parent);
+                        }
+
+                    }else if(sibling->right->color == Color::RED){
+                        if(itr == itr->parent->left){
+                            sibling->right->color = Color::BLACK;
+                            rotate_left(itr->parent);
+                        }else{
+                            itr->parent->color = Color::BLACK;
+                            rotate_left(sibling);
+                            rotate_right(itr->parent);
+                            sibling->parent->color = Color::BLACK;
+                        }
+                    }else{
+                        if(itr == itr->parent->left){
+                            rotate_right(sibling);
+                            rotate_left(itr->parent);
+                        }else{
+                            rotate_left(sibling);
+                            rotate_right(itr->parent);
+                        }
+                        sibling->parent->color = Color::BLACK;
+                    }
+                }
+            }
+
+        }
+    }
     void repair_tree_erase(typename red_black_tree::Node* itr){
+        Node* t_parent = itr->parent;
+        bool is_left_child = (itr == itr->parent->left);
+        std::pair<Node*,bool> balanced_sub_tree = pre_balance(itr);
+        if(t_parent){
+            if(is_left_child){
+                t_parent->left = balanced_sub_tree.first;
+                t_parent->left->parent = t_parent;
+            }else{
+                t_parent->right = balanced_sub_tree.first;
+                t_parent->right->parent = t_parent;
+            }
+            if(balanced_sub_tree.second){
+                repair_recurse(balanced_sub_tree.first);
+            }
+        }else{
+            m_root = balanced_sub_tree.first;
+            m_root->parent = nullptr;
+            m_root->color = Color::BLACK;
+        }
 
     }
     bool erase_by_node_ptr(typename red_black_tree::Node* itr){
         if(itr == nullptr) return false;
+        if(itr->left && itr->right){
+            Node* temp = itr->right;
+            while(temp->left)temp = temp->left;
 
+            Color p = temp->color;
+            temp->color = itr->color;
+            itr->color = p;
+
+            temp->left = itr->left;
+            temp->left->parent = temp;
+            itr->left = nullptr;
+
+            Node* t_right = temp->right;
+            if(temp == itr->right){
+                temp->parent = itr->parent;
+                if(itr->parent){
+                    if(itr->parent->right == itr){
+                        itr->parent->right = temp;
+                    }else{
+                        itr->parent->left = temp;
+                    }
+                }else{
+                    m_root = temp;
+                }
+
+                temp->right = itr;
+                temp->right->parent = temp;
+                itr->right = t_right;
+                if(itr->right) itr->right->parent = itr;
+
+            }else{
+                temp->right = itr->right;
+                temp->right->parent = temp;
+
+                itr->right = t_right;
+                if(itr->right) itr->right->parent = itr;
+
+                Node* t_parent = temp->parent;
+                if(itr->parent){
+                    if(itr == itr->parent->left){
+                        itr->parent->left = temp;
+                    }else{
+                        itr->parent->right= temp;
+                    }
+                    temp->parent = itr->parent;
+
+                    t_parent->left = itr;
+                    itr->parent = t_parent;
+                }else{
+                    m_root = temp;
+                    m_root->parent = nullptr;
+
+                    itr->parent = t_parent;
+                    itr->parent->left = itr;
+                }
+            }
+
+        }
+        if(itr == m_root){
+            m_root = (itr->right?itr->right:itr->left);
+            if(m_root){
+                m_root->color = Color::BLACK;
+                m_root->parent = nullptr;
+            }
+            delete itr;
+        }else{
+            Node* repair_itr = itr->parent;
+            if(itr->color == Color::RED){
+                if(itr == itr->parent->right){
+                    itr->parent->right = nullptr;
+                }else{
+                    itr->parent->right = nullptr;
+                }
+                delete itr;
+            }else{
+                Node* child = (itr->left?itr->left:itr->right);
+                if(child){
+                    child->parent = itr->parent;
+                    if(itr->parent->left == itr){
+                        itr->parent->left = child;
+                    }else{
+                        itr->parent->right = child;
+                    }
+                    child->color = Color::BLACK;
+                    delete itr;
+                }else{
+                    if(itr->parent->right == itr){
+                        itr->parent->right = nullptr;
+                    }else{
+                        itr->parent->left = nullptr;
+                    }
+                    delete itr;
+                    repair_tree_erase(repair_itr);
+                }
+            }
+        }
+        --m_size;
         return true;
     }
 
