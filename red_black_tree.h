@@ -9,6 +9,9 @@ enum class Direction{LEFT,RIGHT};
 
 template<typename Key,typename Value,class Compare = std::less<Key>>
 class red_black_tree{
+
+    red_black_tree& operator=(const red_black_tree&);
+    red_black_tree& operator=(red_black_tree&&);
     struct Node{
         Color color;
         Node *left,*right,*parent;
@@ -18,6 +21,10 @@ class red_black_tree{
         Node(std::pair<Key,Value>&& data):      color(Color::RED),left(nullptr),right(nullptr),parent(nullptr),m_data(data){}
         Node(const Node&) = delete;
         Node&operator=(const Node&) = delete;
+
+        ~Node(){
+            std::cout<<"deleted: "<<m_data.first<<' '<<(color == Color::BLACK? "black":"red")<<std::endl;
+        }
     };
     Node* m_root;
     std::size_t m_size;
@@ -172,27 +179,49 @@ class red_black_tree{
     };
 
 public:
+    template<Traversal _T>
+    using iterator = m_iterator<_T,std::pair<const Key,Value>>;
+    template<Traversal _T>
+    using const_iterator = m_iterator<_T,const std::pair<const Key,Value>>;
+
     bool insert(const Key& key,const Value& value){
         Node **itr = &m_root,*par = nullptr;
         Compare cmp;
         while(*itr){
             par = *itr;
-            if(cmp(itr->m_data->first,key))itr = &((*itr)->right);
-            else if(cmp(key,itr->m_data->first)) itr = &((*itr)->left);
+            if(cmp((*itr)->m_data.first,key))itr = &((*itr)->right);
+            else if(cmp(key,(*itr)->m_data.first)) itr = &((*itr)->left);
             else return false;
         }
-        (*itr) = new Node(key,value);
+        (*itr) = new Node(std::make_pair(key,value));
         (*itr)->parent = par;
         ++m_size;
         repair_tree_insert(*itr);
+        std::cout<<"succsesfuly inserted: "<<key<<". At"<<*itr<<". parent: "<<par<<". current size: "<<m_size<<std::endl;
         return true;
     }
-    template<Traversal _T>
-    using iterator = m_iterator<_T,std::pair<const Key,Value>>;
-    template<Traversal _T>
-    using const_iterator = m_iterator<_T,const std::pair<const Key,Value>>;
+    bool erase(const Key& key){
+        return erase_by_node_ptr(find_node_by_key(key));
+    }
+    template<Traversal _tr>
+    bool erase(iterator<_tr> itr){
+        return erase_by_node_ptr(itr->m_ptr);
+    }
+    void buta_kiir(Node* itr,int szam=1){
+        if(itr){
+            buta_kiir(itr->left,szam+1);
+            std::cout<<std::string(szam,' ')<<itr->m_data.first<<","<<(itr->color==Color::BLACK?"black":"red")<<std::endl;
+            buta_kiir(itr->right,szam+1);
+        }
+    }
+    Node* root(){
+        return m_root;
+    }
     red_black_tree():m_root(nullptr),m_size(0) {}
-    ~red_black_tree() {}
+
+    ~red_black_tree() {
+        this->delete_tree();
+    }
 
 private:
     typename red_black_tree::Node* find_node_by_key(const Key& key)const{
@@ -254,9 +283,7 @@ private:
                 itr = grand_parent;
             }
         }
-        if(itr->parent == nullptr){
-            itr->color == Color::BLACK;
-        }
+        m_root->color = Color::BLACK;
     }
     typename red_black_tree::Node* construct_sub_tree_from(typename red_black_tree::Node* arr[8],int left,int right){
         if(left == right){
@@ -281,10 +308,11 @@ private:
         Node* node_ptr_arr[8];
         Advance_ptr<true,Traversal::IN_ORDER> advance;
         Node* ptr_end = advance.ptr_end(itr);
+        Node* ptr_itr=advance.ptr_begin(itr);
         unsigned node_count = 0;
-        while(itr != ptr_end){
-            node_ptr_arr[node_count++] = itr;
-            advance(itr);
+        while(ptr_itr != ptr_end){
+            node_ptr_arr[node_count++] = ptr_itr;
+            advance(ptr_itr);
         }
         bool should_repair_further = false;
         switch(node_count){
@@ -294,15 +322,16 @@ private:
             should_repair_further = true;
             break;
         case 3:
-            node_ptr_arr[0]->color = node_ptr_arr[1]->color = node_ptr_arr[2]->color = Color::BLACK;
+            node_ptr_arr[1]->color = itr->color;
+            node_ptr_arr[0]->color = node_ptr_arr[2]->color = Color::BLACK;
             break;
         case 4:
-            if( (itr->parent->right == itr? itr->parent->left:itr->parent->right)->color == Color::RED ){
+            if( itr->right->color == Color::RED ){
                 node_ptr_arr[0]->color = node_ptr_arr[1]->color = node_ptr_arr[3]->color = Color::BLACK;
                 node_ptr_arr[2]->color = Color::RED;
             }else{
-                node_ptr_arr[0]->color = node_ptr_arr[1]->color = node_ptr_arr[2]->color = Color::BLACK;
-                node_ptr_arr[3]->color = Color::RED;
+                node_ptr_arr[0]->color = node_ptr_arr[2]->color = Color::BLACK;
+                node_ptr_arr[1]->color = node_ptr_arr[3]->color = Color::RED;
             }
             break;
         case 5:
@@ -321,9 +350,10 @@ private:
             node_ptr_arr[0]->color = node_ptr_arr[2]->color = node_ptr_arr[3]->color =
             node_ptr_arr[4]->color = node_ptr_arr[6]->color = Color::BLACK;
             node_ptr_arr[1]->color = node_ptr_arr[5]->color = node_ptr_arr[7]->color = Color::RED;
+            break;
             default: std::cout<<"\nHIBA!\n";
         }
-        return std::make_pair(construct_sub_tree_from(node_ptr_arr,0,7),should_repair_further);
+        return std::make_pair(construct_sub_tree_from(node_ptr_arr,0,node_count-1),should_repair_further);
     }
     void repair_recurse(typename red_black_tree::Node* itr){
         if(itr->parent!=nullptr){
@@ -533,7 +563,15 @@ private:
         --m_size;
         return true;
     }
-
+    void delete_tree(){
+        Advance_ptr<true,Traversal::POST_ORDER> adc;
+        Node* itr = adc.ptr_begin(m_root);
+        while(itr){
+            Node* temp = itr;
+            adc(itr);
+            delete temp;
+        }
+    }
 };
 
 #endif // RED_BLACK_TREE_H
