@@ -357,11 +357,11 @@ private:
                     rotate_right(itr->parent);
                 }
                 itr->parent->color = Color::RED;
-                sibling = (itr->parent->left==itr? itr->parent->right:itr->parent->left);
+                /*sibling = (itr->parent->left==itr? itr->parent->right:itr->parent->left);
                 if(sibling->left && sibling->right){
                     repair_recurse(itr);
-                }
-                //repair_recurse(itr);
+                }*/
+                repair_recurse(itr);
             }else /*if(sibling->left && sibling->right)*/{
                 Node* parent = itr->parent;
                 if(parent->color == Color::RED){
@@ -437,7 +437,7 @@ private:
     }
     void repair_tree_erase(typename red_black_tree::Node* itr){
         Node* t_parent = itr->parent;
-        bool is_left_child = (itr == itr->parent->left);
+        bool is_left_child = (itr->parent && itr == itr->parent->left);
         std::pair<Node*,bool> balanced_sub_tree = pre_balance(itr);
         if(t_parent){
             if(is_left_child){
