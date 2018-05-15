@@ -381,6 +381,58 @@ public:
     ~red_black_tree() {
         this->delete_tree();
     }
+    
+    template<Traversal Tr>
+    iterator<Tr> begin(){
+        return iterator<Tr>(m_root);
+    }
+    template<Traversal Tr>
+    iterator<Tr> begin(iterator<Tr> itr){
+        return iterator<Tr>( Advance_ptr<true,Tr,Direction::LEFT_RIGHT>().ptr_begin(itr.m_ptr) );
+    }
+    template<Traversal Tr>
+    const_iterator<Tr> cbegin()const{
+        return const_iterator<Tr>(m_root);
+    }
+    template<Traversal Tr>
+    const_iterator<Tr> cbegin(const_iterator<Tr> itr)const{
+        return const_iterator<Tr>( Advance_ptr<true,Tr,Direction::LEFT_RIGHT>().ptr_begin(itr.m_ptr) );
+    }
+
+    template<Traversal Tr>
+    iterator<Tr> end(iterator<Tr> itr = iterator<Tr>(nullptr)){
+        return iterator<Tr>( Advance_ptr<true,Tr,Direction::LEFT_RIGHT>().ptr_end(itr.m_ptr) );
+    }
+    template<Traversal Tr>
+    const_iterator<Tr> cend(const_iterator<Tr> itr = const_iterator<Tr>(nullptr))const{
+        return const_iterator<Tr>( Advance_ptr<true,Tr,Direction::LEFT_RIGHT>().ptr_end(itr.m_ptr) );
+    }
+
+    template<Traversal Tr>
+    reverse_iterator<Tr> rbegin(){
+        return reverse_iterator<Tr>(m_root);
+    }
+    template<Traversal Tr>
+    reverse_iterator<Tr> rbegin(reverse_iterator<Tr> itr){
+        return reverse_iterator<Tr>( Advance_ptr<true,Tr,Direction::RIGHT_LEFT>().ptr_begin(itr.m_ptr) );
+    }
+    template<Traversal Tr>
+    const_reverse_iterator<Tr> crbegin()const{
+        return const_reverse_iterator<Tr>(m_root);
+    }
+    template<Traversal Tr>
+    const_reverse_iterator<Tr> crbegin(const_reverse_iterator<Tr> itr)const{
+        return const_reverse_iterator<Tr>( Advance_ptr<true,Tr,Direction::RIGHT_LEFT>().ptr_begin(itr.m_ptr) );
+    }
+
+    template<Traversal Tr>
+    reverse_iterator<Tr> rend(reverse_iterator<Tr> itr = reverse_iterator<Tr>(nullptr)){
+        return reverse_iterator<Tr>( Advance_ptr<true,Tr,Direction::RIGHT_LEFT>().ptr_end(itr.m_ptr) );
+    }
+    template<Traversal Tr>
+    const_reverse_iterator<Tr> crend(const_reverse_iterator<Tr> itr = const_iterator<Tr>(nullptr))const{
+        return const_reverse_iterator<Tr>( Advance_ptr<true,Tr,Direction::RIGHT_LEFT>().ptr_end(itr.m_ptr) );
+    }
 
 private:
     typename red_black_tree::Node* find_node_by_key(const Key& key)const{
@@ -485,13 +537,9 @@ private:
             node_ptr_arr[0]->color = node_ptr_arr[2]->color = Color::BLACK;
             break;
         case 4:
-            if( itr->right->color == Color::RED ){
-                node_ptr_arr[0]->color = node_ptr_arr[1]->color = node_ptr_arr[3]->color = Color::BLACK;
-                node_ptr_arr[2]->color = Color::RED;
-            }else{
-                node_ptr_arr[0]->color = node_ptr_arr[2]->color = Color::BLACK;
-                node_ptr_arr[1]->color = node_ptr_arr[3]->color = Color::RED;
-            }
+            node_ptr_arr[1]->color = itr->color;
+            node_ptr_arr[0]->color = node_ptr_arr[2]->color = Color::BLACK;
+            node_ptr_arr[3]->color = Color::RED;
             break;
         case 5:
             node_ptr_arr[0]->color = node_ptr_arr[2]->color = node_ptr_arr[3]->color = Color::BLACK;
