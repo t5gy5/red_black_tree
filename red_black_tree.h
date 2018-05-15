@@ -5,7 +5,7 @@
 
 enum class Color{BLACK = false,RED = true};
 enum class Traversal{PRE_ORDER,IN_ORDER,POST_ORDER};
-enum class Direction{LEFT,RIGHT};
+enum class Direction{LEFT_RIGHT,RIGHT_LEFT};
 
 template<typename Key,typename Value,class Compare = std::less<Key>>
 class red_black_tree{
@@ -50,13 +50,13 @@ class red_black_tree{
         __ROTATE_AROUND_NODE__(right,left);
     }
     #undef __ROTATE_AROUND_NODE__
-    template<bool,Traversal>
+    template<bool,Traversal,Direction>
     struct Advance_ptr{
         typename red_black_tree::Node* ptr_begin(typename red_black_tree::Node* itr){}
         typename red_black_tree::Node* ptr_end  (typename red_black_tree::Node* itr){}
         void operator()(typename red_black_tree::Node*& itr){}
     };
-    template<bool D>struct Advance_ptr<D,Traversal::PRE_ORDER>{
+    /*template<bool D>struct Advance_ptr<D,Traversal::PRE_ORDER>{
         typename red_black_tree::Node* ptr_begin(typename red_black_tree::Node* itr){
             return itr;
         }
@@ -149,8 +149,164 @@ class red_black_tree{
                 }else itr = nullptr;
             }
         }
+    };*/
+    #define __PRE_ORDER_ADVANCE__(X,Y,itr)do{\
+    if(itr){\
+        if(itr->X) itr = itr->X;\
+        else if(itr->Y)itr = itr->Y;\
+        else{\
+            bool not_found = true;\
+            while(not_found && itr->parent){\
+                if(itr->parent->Y!=itr && itr->parent->Y){\
+                    itr = itr->parent->Y;\
+                    not_found = false;\
+                }else itr = itr->parent;\
+            }\
+            if(not_found)itr = nullptr;\
+        }\
+    }}while(false)
+    #define __PRE_ORDER_END__(X,Y,itr)do{\
+    if(itr){\
+        bool not_found = true;\
+        while(not_found && itr->parent){\
+            if(itr->parent->Y!=itr && itr->parent->Y){\
+                itr = itr->parent->Y;\
+                not_found = false;\
+            }else itr = itr->parent;\
+        }\
+        if(not_found)itr = nullptr;\
+    }}while(false)
+
+    template<bool D>struct Advance_ptr<D,Traversal::PRE_ORDER,Direction::LEFT_RIGHT>{
+        typename red_black_tree::Node* ptr_begin(typename red_black_tree::Node* itr){
+            return itr;
+        }
+        typename red_black_tree::Node* ptr_end  (typename red_black_tree::Node* itr){
+            __PRE_ORDER_END__(left,right,itr);
+            return itr;
+        }
+        void operator()(typename red_black_tree::Node*& itr){
+            __PRE_ORDER_ADVANCE__(left,right,itr);
+        }
     };
-    template<Traversal _T,class Storable>
+
+    template<bool D>struct Advance_ptr<D,Traversal::PRE_ORDER,Direction::RIGHT_LEFT>{
+        typename red_black_tree::Node* ptr_begin(typename red_black_tree::Node* itr){
+            return itr;
+        }
+        typename red_black_tree::Node* ptr_end  (typename red_black_tree::Node* itr){
+            __PRE_ORDER_END__(right,left,itr);
+            return itr;
+        }
+        void operator()(typename red_black_tree::Node*& itr){
+            __PRE_ORDER_ADVANCE__(right,left,itr);
+        }
+    };
+    #undef __PRE_ORDER_ADVANCE__
+    #undef __PRE_ORDER_END__
+
+    #define __IN_ORDER_ADVANCE__(X,Y,itr)do{\
+    if(itr){\
+        if(itr->Y){\
+            itr = itr->Y;\
+            while(itr->X) itr = itr->X;\
+        }else{\
+            bool not_found = true;\
+            while(not_found && itr->parent){\
+                if(itr->parent->Y!=itr)not_found = false;\
+                itr = itr->parent;\
+            }\
+            if(not_found) itr = nullptr;\
+        }\
+    }}while(false)
+    #define __IN_ORDER_END__(X,Y,itr)do{\
+    if(itr){\
+        bool not_found = true;\
+        while(not_found && itr->parent){\
+            if(itr->parent->Y!=itr)not_found = false;\
+            itr = itr->parent;\
+        }\
+        if(not_found) itr = nullptr;\
+    }}while(false)
+
+    template<bool D> struct Advance_ptr<D,Traversal::IN_ORDER,Direction::LEFT_RIGHT>{
+        typename red_black_tree::Node* ptr_begin(typename red_black_tree::Node* itr){
+            while(itr->left) itr = itr->left;
+            return itr;
+        }
+        typename red_black_tree::Node* ptr_end  (typename red_black_tree::Node* itr){
+            __IN_ORDER_END__(left,right,itr);
+            return itr;
+        }
+        void operator()(typename red_black_tree::Node*& itr){
+            __IN_ORDER_ADVANCE__(left,right,itr);
+        }
+    };
+    template<bool D> struct Advance_ptr<D,Traversal::IN_ORDER,Direction::RIGHT_LEFT>{
+        typename red_black_tree::Node* ptr_begin(typename red_black_tree::Node* itr){
+            while(itr->right) itr = itr->right;
+            return itr;
+        }
+        typename red_black_tree::Node* ptr_end  (typename red_black_tree::Node* itr){
+            __IN_ORDER_END__(right,left,itr);
+            return itr;
+        }
+        void operator()(typename red_black_tree::Node*& itr){
+            __IN_ORDER_ADVANCE__(right,left,itr);
+        }
+    };
+    #undef __IN_ORDER_ADVANCE__
+    #undef __IN_ORDER_END__
+
+    #define __POST_ORDER_ADVANCE__(X,Y,itr)do{\
+    if(itr){\
+        if(itr->parent){\
+            if(itr->parent->Y==itr || itr->parent->Y==nullptr){\
+                itr = itr->parent;\
+            }else{\
+                itr = itr->parent->Y;\
+                while(itr->X || itr->Y) {\
+                    if(itr->X)itr = itr->X;\
+                    else if(itr->Y)itr =itr->Y;\
+                }\
+            }\
+        }else itr = nullptr;\
+    }}while(false)
+    #define __POST_ORDER_BEGIN__(X,Y,itr)do{\
+    while(itr->X || itr->Y) {\
+        if(itr->X)itr = itr->X;\
+        else if(itr->Y)itr =itr->Y;\
+    }}while(false)
+
+    template<bool D> struct Advance_ptr<D,Traversal::POST_ORDER,Direction::LEFT_RIGHT>{
+        typename red_black_tree::Node* ptr_begin(typename red_black_tree::Node* itr){
+            __POST_ORDER_BEGIN__(left,right,itr);
+            return itr;
+        }
+        typename red_black_tree::Node* ptr_end  (typename red_black_tree::Node* itr){
+            this->operator()(itr);
+            return itr;
+        }
+        void operator()(typename red_black_tree::Node*& itr){
+            __POST_ORDER_ADVANCE__(left,right,itr);
+        }
+    };
+    template<bool D> struct Advance_ptr<D,Traversal::POST_ORDER,Direction::RIGHT_LEFT>{
+        typename red_black_tree::Node* ptr_begin(typename red_black_tree::Node* itr){
+            __POST_ORDER_BEGIN__(right,left,itr);
+            return itr;
+        }
+        typename red_black_tree::Node* ptr_end  (typename red_black_tree::Node* itr){
+            this->operator()(itr);
+            return itr;
+        }
+        void operator()(typename red_black_tree::Node*& itr){
+            __POST_ORDER_ADVANCE__(right,left,itr);
+        }
+    };
+    #undef __POST_ORDER_BEGIN__
+    #undef __POST_ORDER_ADVANCE__
+    template<Traversal _T,Direction _D,class Storable>
     class m_iterator{
         typename red_black_tree::Node* m_ptr;
     public:
@@ -169,20 +325,32 @@ class red_black_tree{
         bool operator==(const m_iterator& rhs){return m_ptr == rhs.m_ptr;}
         bool operator!=(const m_iterator& rhs){return m_ptr != rhs.m_ptr;}
 
-        self_type& operator++(){Advance_ptr<true,_T>()(m_ptr);}
+        self_type& operator++(){Advance_ptr<true,_T,_D>()(m_ptr);}
         self_type operator++(int){
             m_iterator temp(*this);
             ++(*this);
             return temp;
+        }
+        template<Traversal __T,Direction __D>
+        operator m_iterator<__T,__D,Storable>(){
+            return m_iterator<__T,__D,Storable>(m_ptr);
+        }
+        template<Traversal __T,Direction __D>
+        operator m_iterator<__T,__D,const Storable>(){
+            return m_iterator<__T,__D,const Storable>(m_ptr);
         }
         friend class red_black_tree;
     };
 
 public:
     template<Traversal _T>
-    using iterator = m_iterator<_T,std::pair<const Key,Value>>;
+    using iterator = m_iterator<_T,Direction::LEFT_RIGHT,std::pair<const Key,Value>>;
     template<Traversal _T>
-    using const_iterator = m_iterator<_T,const std::pair<const Key,Value>>;
+    using const_iterator = m_iterator<_T,Direction::LEFT_RIGHT,const std::pair<const Key,Value>>;
+    template<Traversal _T>
+    using reverse_iterator = m_iterator<_T,Direction::RIGHT_LEFT,std::pair<const Key,Value>>;
+    template<Traversal _T>
+    using const_reverse_iterator = m_iterator<_T,Direction::RIGHT_LEFT,const std::pair<const Key,Value>>;
 
     bool insert(const Key& key,const Value& value){
         Node **itr = &m_root,*par = nullptr;
@@ -233,9 +401,9 @@ private:
             Node* uncle = (itr->parent->parent->left == itr->parent?itr->parent->parent->right: itr->parent->parent->left);
             if(uncle == nullptr || uncle->color == Color::BLACK){
                 if(grand_parent->left && itr == grand_parent->left->right){
-                    rotate_left(grand_parent);
+                    rotate_left(irt->parent);
                 }else if(grand_parent->right && itr == grand_parent->right->left){
-                    rotate_right(grand_parent);
+                    rotate_right(itr->parent);
                 }
                 if(itr->parent->right == itr){
                     rotate_left(grand_parent);
