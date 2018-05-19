@@ -56,100 +56,6 @@ class red_black_tree{
         typename red_black_tree::Node* ptr_end  (typename red_black_tree::Node* itr){}
         void operator()(typename red_black_tree::Node*& itr){}
     };
-    /*template<bool D>struct Advance_ptr<D,Traversal::PRE_ORDER>{
-        typename red_black_tree::Node* ptr_begin(typename red_black_tree::Node* itr){
-            return itr;
-        }
-        typename red_black_tree::Node* ptr_end  (typename red_black_tree::Node* itr){
-            if(itr){
-                bool not_found = true;
-                while(not_found && itr->parent){
-                    if(itr->parent->right!=itr && itr->parent->right){
-                        itr = itr->parent->right;
-                        not_found = false;
-                    }else itr = itr->parent;
-                }
-                if(not_found)itr = nullptr;
-            }
-            return itr;
-        }
-        void operator()(typename red_black_tree::Node*& itr){
-            if(itr){
-                if(itr->left) itr = itr->left;
-                else if(itr->right)itr = itr->right;
-                else{
-                    bool not_found = true;
-                    while(not_found && itr->parent){
-                        if(itr->parent->right!=itr && itr->parent->right){
-                            itr = itr->parent->right;
-                            not_found = false;
-                        }else itr = itr->parent;
-                    }
-                    if(not_found)itr = nullptr;
-                }
-            }
-        }
-    };
-    template<bool D> struct Advance_ptr<D,Traversal::IN_ORDER>{
-        typename red_black_tree::Node* ptr_begin(typename red_black_tree::Node* itr){
-            while(itr->left) itr = itr->left;
-            return itr;
-        }
-        typename red_black_tree::Node* ptr_end  (typename red_black_tree::Node* itr){
-            if(itr){
-                bool not_found = true;
-                while(not_found && itr->parent){
-                    if(itr->parent->right!=itr)not_found = false;
-                    itr = itr->parent;
-                }
-                if(not_found) itr = nullptr;
-            }
-            return itr;
-        }
-        void operator()(typename red_black_tree::Node*& itr){
-            if(itr){
-                if(itr->right){
-                    itr = itr->right;
-                    while(itr->left) itr = itr->left;
-                }else{
-                    bool not_found = true;
-                    while(not_found && itr->parent){
-                        if(itr->parent->right!=itr)not_found = false;
-                        itr = itr->parent;
-                    }
-                    if(not_found) itr = nullptr;
-                }
-            }
-        }
-    };
-    template<bool D> struct Advance_ptr<D,Traversal::POST_ORDER>{
-        typename red_black_tree::Node* ptr_begin(typename red_black_tree::Node* itr){
-            while(itr->left || itr->right) {
-                if(itr->left)itr = itr->left;
-                else if(itr->right)itr =itr->right;
-            }
-            return itr;
-        }
-        typename red_black_tree::Node* ptr_end  (typename red_black_tree::Node* itr){
-            this->operator()(itr);
-            return itr;
-        }
-        void operator()(typename red_black_tree::Node*& itr){
-            if(itr){
-                if(itr->parent){
-                    if(itr->parent->right==itr || itr->parent->right==nullptr){
-                        itr = itr->parent;
-                    }else if(itr->parent->right){
-                        itr = itr->parent->right;
-                        while(itr->left || itr->right) {
-                            if(itr->left)itr = itr->left;
-                            else if(itr->right)itr =itr->right;
-                        }
-                    }
-                }else itr = nullptr;
-            }
-        }
-    };*/
     #define __PRE_ORDER_ADVANCE__(X,Y,itr)do{\
     if(itr){\
         if(itr->X) itr = itr->X;\
@@ -446,31 +352,6 @@ private:
         return itr;
     }
     void repair_tree_insert(typename red_black_tree::Node* itr){
-        /*if(itr->parent==nullptr || itr->parent->color == Color::BLACK){
-            if(itr->parent == nullptr) itr->color == Color::BLACK;
-        }else{
-            Node* grand_parent = itr->parent->parent;
-            Node* uncle = (itr->parent->parent->left == itr->parent?itr->parent->parent->right: itr->parent->parent->left);
-            if(uncle == nullptr || uncle->color == Color::BLACK){
-                if(grand_parent->left && itr == grand_parent->left->right){
-                    rotate_left(irt->parent);
-                }else if(grand_parent->right && itr == grand_parent->right->left){
-                    rotate_right(itr->parent);
-                }
-                if(itr->parent->right == itr){
-                    rotate_left(grand_parent);
-                }else{
-                    rotate_right(grand_parent);
-                }
-                grand_parent->color = Color::RED;
-                grand_parent->parent->color = Color::BLACK;
-                m_root->color = Color::BLACK;
-            }else{
-                uncle->color = itr->parent->color = Color::BLACK;
-                grand_parent->color = Color::RED;
-                repair_tree_insert(grand_parent);
-            }
-        }*/
         while(itr->parent && itr->parent->color == Color::RED){
             Node* grand_parent = itr->parent->parent;
             Node* uncle = (itr->parent->parent->left == itr->parent?itr->parent->parent->right: itr->parent->parent->left);
@@ -563,7 +444,9 @@ private:
         return std::make_pair(construct_sub_tree_from(node_ptr_arr,0,node_count-1),should_repair_further);
     }
     void repair_recurse(typename red_black_tree::Node* itr){
-        if(itr->parent!=nullptr){
+        bool not_done = true;
+        while(itr->parent!=nullptr && not_done){
+            not_done = false;
             Node* sibling = (itr->parent->left==itr? itr->parent->right:itr->parent->left);
             if(sibling->color == Color::RED){
                 sibling->color = Color::BLACK;
@@ -573,82 +456,77 @@ private:
                     rotate_right(itr->parent);
                 }
                 itr->parent->color = Color::RED;
-                /*sibling = (itr->parent->left==itr? itr->parent->right:itr->parent->left);
-                if(sibling->left && sibling->right){
-                    repair_recurse(itr);
-                }*/
-                repair_recurse(itr);
-            }else /*if(sibling->left && sibling->right)*/{
-                Node* parent = itr->parent;
-                if(parent->color == Color::RED){
-                    parent->color = Color::BLACK;
-                    if(sibling->left->color == Color::BLACK && sibling->right->color == Color::BLACK){
-                        sibling->color= Color::RED;
-                    }else if(sibling->left->color == Color::RED){
-                        if(itr == itr->parent->left){
-                            rotate_right(sibling);
-                            rotate_left(itr->parent);
-                        }else{
-                            sibling->color = Color::RED;
-                            sibling->left->color = Color::BLACK;
-                            rotate_right(parent);
-                        }
-                    }else if(sibling->right->color == Color::RED){
-                        if(itr == itr->parent->left){
-                            sibling->color = Color::RED;
-                            sibling->right->color = Color::BLACK;
-                            rotate_left(parent);
-                        }else{
-                            rotate_left(sibling);
-                            rotate_right(itr->parent);
-                        }
+                sibling = (itr->parent->left==itr? itr->parent->right:itr->parent->left);
+            }
+            Node* parent = itr->parent;
+            if(parent->color == Color::RED){
+                parent->color = Color::BLACK;
+                if(sibling->left->color == Color::BLACK && sibling->right->color == Color::BLACK){
+                    sibling->color= Color::RED;
+                }else if(sibling->left->color == Color::RED){
+                    if(itr == itr->parent->left){
+                        rotate_right(sibling);
+                        rotate_left(itr->parent);
                     }else{
-                        if(itr == itr->parent->right){
-                            rotate_right(itr->parent);
-                        }else{
-                            rotate_left(itr->parent);
-                        }
                         sibling->color = Color::RED;
-                        sibling->left->color = sibling->right->color = Color::BLACK;
+                        sibling->left->color = Color::BLACK;
+                        rotate_right(parent);
+                    }
+                }else if(sibling->right->color == Color::RED){
+                    if(itr == itr->parent->left){
+                        sibling->color = Color::RED;
+                        sibling->right->color = Color::BLACK;
+                        rotate_left(parent);
+                    }else{
+                        rotate_left(sibling);
+                        rotate_right(itr->parent);
                     }
                 }else{
-                    if(sibling->left->color == Color::BLACK && sibling->right->color == Color::BLACK){
-                        sibling->color = Color::RED;
-                        repair_recurse(itr->parent);
-                    }else if(sibling->left->color == Color::RED){
-                        if(itr == itr->parent->left){
-                            itr->parent->color = Color::BLACK;
-                            rotate_right(sibling);
-                            rotate_left(itr->parent);
-                            sibling->parent->color = Color::BLACK;
-                        }else{
-                            sibling->left->color = Color::BLACK;
-                            rotate_right(itr->parent);
-                        }
-
-                    }else if(sibling->right->color == Color::RED){
-                        if(itr == itr->parent->left){
-                            sibling->right->color = Color::BLACK;
-                            rotate_left(itr->parent);
-                        }else{
-                            itr->parent->color = Color::BLACK;
-                            rotate_left(sibling);
-                            rotate_right(itr->parent);
-                            sibling->parent->color = Color::BLACK;
-                        }
+                    if(itr == itr->parent->right){
+                        rotate_right(itr->parent);
                     }else{
-                        if(itr == itr->parent->left){
-                            rotate_right(sibling);
-                            rotate_left(itr->parent);
-                        }else{
-                            rotate_left(sibling);
-                            rotate_right(itr->parent);
-                        }
+                        rotate_left(itr->parent);
+                    }
+                    sibling->color = Color::RED;
+                    sibling->left->color = sibling->right->color = Color::BLACK;
+                }
+            }else{
+                if(sibling->left->color == Color::BLACK && sibling->right->color == Color::BLACK){
+                    sibling->color = Color::RED;
+                    not_done = true;
+                    itr = itr->parent;
+                }else if(sibling->left->color == Color::RED){
+                    if(itr == itr->parent->left){
+                        itr->parent->color = Color::BLACK;
+                        rotate_right(sibling);
+                        rotate_left(itr->parent);
+                        sibling->parent->color = Color::BLACK;
+                    }else{
+                        sibling->left->color = Color::BLACK;
+                        rotate_right(itr->parent);
+                    }
+
+                }else if(sibling->right->color == Color::RED){
+                    if(itr == itr->parent->left){
+                        sibling->right->color = Color::BLACK;
+                        rotate_left(itr->parent);
+                    }else{
+                        itr->parent->color = Color::BLACK;
+                        rotate_left(sibling);
+                        rotate_right(itr->parent);
                         sibling->parent->color = Color::BLACK;
                     }
+                }else{
+                    if(itr == itr->parent->left){
+                        rotate_right(sibling);
+                        rotate_left(itr->parent);
+                    }else{
+                        rotate_left(sibling);
+                        rotate_right(itr->parent);
+                    }
+                    sibling->parent->color = Color::BLACK;
                 }
             }
-
         }
     }
     void repair_tree_erase(typename red_black_tree::Node* itr){
@@ -664,11 +542,6 @@ private:
                 t_parent->right->parent = t_parent;
             }
             if(balanced_sub_tree.second){
-                /*Node* temp = balanced_sub_tree.first;
-                Node* sibling = (temp->parent->left==temp?temp->parent->right:temp->parent->left);
-                if(sibling->right && sibling->left){
-                    repair_recurse(temp);
-                }*/
                 repair_recurse(balanced_sub_tree.first);
             }
         }else{
@@ -676,7 +549,7 @@ private:
             m_root->parent = nullptr;
             m_root->color = Color::BLACK;
         }
-
+        m_root->color = Color::BLACK;
     }
     bool erase_by_node_ptr(typename red_black_tree::Node* itr){
         if(itr == nullptr) return false;
