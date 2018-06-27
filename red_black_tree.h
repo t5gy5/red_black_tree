@@ -44,8 +44,9 @@ class red_black_tree{
 
         Node(const std::pair<Key,Value>& data): color(Color::RED),left(nullptr),right(nullptr),parent(nullptr),m_data(data){}
         Node(std::pair<Key,Value>&& data):      color(Color::RED),left(nullptr),right(nullptr),parent(nullptr),m_data(std::move(data)){}
-        Node(const Node&) = delete;
-        Node&operator=(const Node&) = delete;
+        Node(const Node& cpy):color(cpy.color),left(nullptr),right(nullptr),parent(nullptr),m_data(cpy.m_data){}
+        Node(Node&& cpy):color(cpy.color),left(nullptr),right(nullptr),parent(nullptr),m_data(std::move(cpy.m_data)){}
+        Node& operator=(const Node&) = delete;
 
         ~Node(){
             std::cout<<"deleted: "<<m_data.first<<' '<<(color == Color::BLACK? "black":"red")<<std::endl;
@@ -286,10 +287,6 @@ class red_black_tree{
     };
 
 public:
-    red_black_tree& operator=(const red_black_tree&) = delete;
-    red_black_tree& operator=(red_black_tree&&) = delete;
-    red_black_tree(const red_black_tree&) = delete;
-    red_black_tree(red_black_tree&&) = delete;
     template<Traversal _T>
     using iterator = m_iterator<_T,Direction::LEFT_RIGHT,std::pair<const Key,Value>>;
     template<Traversal _T>
@@ -338,6 +335,27 @@ public:
         return m_root;
     }
     red_black_tree():m_root(nullptr),m_size(0) {}
+    red_black_tree(const red_black_tree& cpy):m_root(nullptr),m_size(0){
+        this->construct_from_tree(cpy);
+    }
+    red_black_tree(red_black_tree&& cpy):m_root(cpy.m_root),m_size(cpy.m_size){
+        cpy.m_root = nullptr;
+        cpy.m_size = 0;
+    }
+
+    red_black_tree& operator=(const red_black_tree& rhs){
+        if(&rhs != this){
+            this->delete_tree();
+            this->construct_from_tree(rhs);
+        }
+        return *this;
+    }
+    red_black_tree& operator=(red_black_tree&& rhs){
+        this->m_root = rhs.m_root;
+        this->m_size = rhs.m_size;
+        rhs.m_size = 0;
+        rhs.m_root = nullptr;
+    }
 
     ~red_black_tree() {
         this->delete_tree();
@@ -495,7 +513,7 @@ private:
             node_ptr_arr[4]->color = node_ptr_arr[6]->color = Color::BLACK;
             node_ptr_arr[1]->color = node_ptr_arr[5]->color = node_ptr_arr[7]->color = Color::RED;
             break;
-            default: std::cout<<"\nHIBA!\n";
+            default: std::cout<<"\nERROR!\n";
         }
         return std::make_pair(construct_sub_tree_from(node_ptr_arr,0,node_count-1),should_repair_further);
     }
@@ -713,7 +731,43 @@ private:
         }
     }
     std::pair<typename red_black_tree::Node*,std::size_t> construct_from_tree(const red_black_tree& cpy){
-
+        if(cpy.m_root){
+            Node* root = new Node(cpy.m_root.m_data);
+            Node** itr = &root;
+            Node* c_itr = cpy.m_root;
+            while(c_itr){
+                if(c_itr->left){
+                    c_itr = c_itr->left;
+                    (*itr)->left = new Node(*c_itr);
+                    (*itr)->left->parent = (*itr);
+                    itr = &((*itr)->left);
+                }else if(c_itr->right){
+                    c_itr = c_itr->right;
+                    (*itr)->right= new Node(*c_itr);
+                    (*itr)->right->parent= (*itr);
+                    itr = &((*itr)->right);
+                }else{
+                    bool not_found = true;
+                    while(c_itr->parent && not_found){
+                        itr = &((*itr)->parent);
+                        if(c_itr != c_itr->parent->right && c_itr->parent->right){
+                            c_itr = c_itr->parent->right;
+                            (*itr)->right = new Node(*c_itr);
+                            (*itr)->right->parent = (*itr);
+                            itr = &((*itr)->right);
+                            not_found = false;
+                        }else{
+                            c_itr = c_itr->parent;
+                        }
+                    }
+                    if(not_found){
+                        c_itr = nullptr;
+                    }
+                }
+            }
+            return std::make_pair(root,cpy.m_size);
+        }
+        return std::make_pair(nullptr,0);
     }
 };
 
