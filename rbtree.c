@@ -440,7 +440,67 @@ RBT_Preparation RBT_repair_lowest_layer(RBNode** root,RBNode* itr){ //++++++++++
 }                                                                   // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++|
 
 void RBT_repair_tree_final(RBNode** root,RBNode* itr){
-    // Existence of cousins is guaranteed, since itr has black path length of x(x>=1, due to RBT_repair_lowest_layer),and itr's sibling has x+1. btw itr is currently black.
-
+    // Existence of nephews and sibling is guaranteed, since itr has black path length of x(x>=1, due to RBT_repair_lowest_layer),and itr's sibling has x+1. btw itr is currently black.
+    RBNode* parent = itr->parent;
+    while(parent){
+        size_t child_side = (itr == parent->left? LEFT:RIGHT);
+        RBNode* sibling = (child_side == LEFT ? parent->right : parent->left);
+        size_t main_color,secondary_color;
+        RBNode** parent_ref = root,* grand_parent = __CLEAR__(parent->parent);
+        if(grand_parent){
+            parent_ref = (grand_parent->left == parent ? &(grand_parent->left) : &(grand_parent->right));
+        }
+        if(child_side == LEFT){
+            main_color = _COLOR_(sibling->left);
+            secondary_color = _COLOR_(sibling->right);
+        }else{
+            main_color = _COLOR_(sibling->right);
+            secondary_color = _COLOR_(sibling->left);
+        }
+        if(main_color == BLACK && secondary_color == BLACK){
+            if(_COLOR_(parent) == RED){
+                _SET_BLACK_(parent);
+                _SET_RED_(sibling);
+                return;
+            }else if(_COLOR_(sibling) == RED){
+                _SET_BLACK_(sibling);
+                _SET_RED_(parent);
+                if(child_side == LEFT){
+                    RBT_rotate_left(parent_ref);
+                    sibling = parent->right;
+                    main_color = _COLOR_(sibling->left);
+                    parent_ref = &(sibling->left);
+                }else{
+                    RBT_rotate_right(parent_ref);
+                    sibling = parent->left;
+                    main_color = _COLOR_(sibling->right);
+                    parent_ref = &(sibling->right);
+                }
+            }else{
+                _SET_RED_(sibling);
+                itr = parent;
+                continue;
+            }
+        }
+        secondary_color = _COLOR_(parent);
+        _SET_BLACK_(parent);
+        if(main_color == RED){
+            if(child_side == LEFT){
+                RBT_rotate_right(&(parent->right));
+            }else{
+                RBT_rotate_left(&(parent->left));
+            }
+        }
+        if(child_side == LEFT){
+            RBT_rotate_left(parent_ref);
+            _SET_BLACK_(parent->right);
+        }else{
+            RBT_rotate_right(parent_ref);
+            _SET_BLACK_(parent->left);
+        }
+        parent->parent = (RBNode*)(((size_t)(parent->parent)&(~1))|secondary_color);
+        _SET_BLACK_(*root);
+        return;
+    }
 
 }
