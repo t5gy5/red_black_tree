@@ -13,12 +13,14 @@ extern const size_t RBT_SIZE_OFFSET;
 /**
 * C++ like iterator.
 * Modifying the key part of data pointed by the iterator corrupts the structure.
+* For the ease of assignment nothing is const, but modify nothing.
+* the iterator is for accessing the data only, and nothing else.
+* iterator reached the end iff data == NULL
 */
-typedef struct RBT_Iterator_t{
-    Object* data;
+typedef struct RBT_Iterator{
+    Object*  data;
     RBNode* current;
 }RBT_Iterator;
-
 /**
 * Returns a pointer to an empty Red Black Tree, where
 * "compare" is used to compare keys, and
@@ -40,6 +42,11 @@ void RBT_destroy(RBTree*, void (*deallocate)(Object*));
 */
 int RBT_advance(RBT_Iterator*itr, int direction);
 
+/**
+* advances itr abs(direction) times in the corresponding direction
+* returns 0 iff iterator reached and end, or couldn't be moved
+*/
+int RBT_advance_n(RBT_Iterator*itr, int direction);
 /**
 * Think of it as tree[key], but returns the whole object.
 * Returns NULL if there is no corresponding object.
@@ -113,4 +120,17 @@ RBT_Iterator RBT_rend(RBTree*);
 */
 size_t RBT_size(RBTree*);
 
+/**
+* Restructures the tree into a perfectly balanced tree.
+*/
+void RBT_balance(RBTree*);
+
+/**
+* Makes a deep copy* of tree.
+* where copy does a deep copy of the stored objects.
+* In case of memory allocation error, destroy is used to
+* remove the already copied objects.
+* The copy is not perfect since it will be perfectly balanced.
+*/
+RBTree* RBT_copy(RBTree* tree,Object* (*copy)(const Object*),void (*destroy)(Object*));
 #endif // RBTREE_H
