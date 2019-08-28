@@ -6,7 +6,7 @@
 #define _SET_RED_(itr) (itr)->parent = (RBNode*)((size_t)((itr)->parent) | RED_MASK)
 #define _SET_BLACK_(itr) (itr)->parent = (RBNode*)((size_t)((itr)->parent) & BLACK_MASK)
 #define _SET_PARENT_(itr,ptr) (itr)->parent = (RBNode*)(_COLOR_(itr)|(size_t)(ptr))
-#define _SET_COLOR_(itr,color) (itr)->parent = (RBNode*)((size_t)((itr)->parent) | color)
+#define _SET_COLOR_(itr,color) (itr)->parent = (RBNode*)((size_t)((itr)->parent) | (color))
 #define _CHILD_REF_OFFSET_(itr,offset) (RBNode**)((size_t)(itr)+(offset))
 #define _CHILD_REF_PTR_(parent,itr) ((parent)->left == (itr) ? &((parent)->left): &((parent)->right))
 #define _REPAINT_(itr,color) (itr)->parent = (RBNode*)( ((size_t)((itr)->parent)&BLACK_MASK)|(color))
@@ -321,39 +321,64 @@ static inline void RBT_rotate_right(RBNode** itr){
     __RBT__ROTATE__(itr,right,left);
 }
 
+/*
+itr == I ; parent == P; grand_parent = G; uncle = U;
+CASE 1:
+        GB               GR
+       /  \             /  \
+     PR    UR ----->  PB    UB       + repair(G)
+   X/  \X            X/\X  X/\X
+  IR                IR
+
+CASE 2:
+         GB     rotate        PB
+        /  \X   right G     /    \
+      PR    UB  ------>   IR      GR
+     /  \X              X/  \X  X/  \X
+   IR                                UB
+ X/  \X
+
+CASE 3:
+       GB     rotate        GB     rotate       IB
+      /  \X   left P       /  \X   right G    /    \
+    PR    UB  ----->     IR    UB  ------>  PR      GR
+  X/  \X                /  \X             X/  \X  X/  \X
+       IR             PR                               UB
+      X/\X          X/  \X
+*/
 
 /**
 * takes the pointer to the inserted node
 * and repairs the tree
 */
-void RBT_repair_tree_insert (RBNode** root, RBNode* itr){                       //repair(itr):                                                                              |
-    RBNode* parent = _CLEAR_(itr->parent);                                      //CASE 1:          grand_parent_B                              grand_parent_R               |
-    size_t parent_side;                                                         //                /              \                            /              \              |
-    while(parent && _COLOR_(parent) == RED){                                    //        parent_R                uncle_R ----->      parent_B                uncle_B       |
-        RBNode* grand_parent = _CLEAR_(parent->parent);                         //      x/        \x            x/       \x         x/        \x            x/       \x     |
-        parent_side = (parent == grand_parent->right?RIGHT:LEFT);               //  itr_R                                       itr_R                                       |
-        RBNode* uncle = (parent_side ? grand_parent->left: grand_parent->right);//                                                                                          |
-        if(uncle == NULL || _COLOR_(uncle) == BLACK){                           //                                              + repair(grand_parent)                      |
-            size_t child_side = (itr == parent->right? RIGHT:LEFT);             //==========================================================================================|
-            RBNode** grand_ref = root;                                          //CASE 2:(child_side == parent_side)                                                        |
-            if(grand_parent->parent){                                           //                 grand_parent_B          rotate          parent_B                         |
-                grand_ref = _CHILD_REF_PTR_(grand_parent->parent,grand_parent); //                /              \X        right          /         \                       |
-            }                                                                   //        parent_R                uncle_B  ----->    itr_R           grand_parent_R         |
-            if(parent_side == LEFT){                                            //       /        \X                                X/  \X          X/             \X       |
-                if(child_side == RIGHT){                                        //  itr_R                                                                           uncle_B |
-                   RBT_rotate_left (&(grand_parent->left ));                    // X/  \X                                                                                   |
-                }                                                               //==========================================================================================|
-                RBT_rotate_right(grand_ref);                                    //CASE 3: (child_side != parent_side)                                                       |
-            }else{                                                              //                 grand_parent_B                                grand_parent_B             |
-                if(child_side == LEFT){                                         //                /              \X                             /              \X           |
-                    RBT_rotate_right(&(grand_parent->right));                   //        parent_R                uncle_B  ----->          itr_R                uncle_B     |
-                }                                                               //      X/        \X                                      /     \X                          |
-                RBT_rotate_left(grand_ref);                                     //                 itr_R                          parent_R                                  |
-            }                                                                   //                                                 X/  \X       +CASE 2(itr<-- parent)      |
-            _SET_BLACK_(*grand_ref);                                            //******************************************************************************************|
+void RBT_repair_tree_insert (RBNode** root, RBNode* itr){
+    RBNode* parent = _CLEAR_(itr->parent);
+    size_t parent_side;
+    while(parent && _COLOR_(parent) == RED){
+        RBNode* grand_parent = _CLEAR_(parent->parent);
+        parent_side = (parent == grand_parent->right?RIGHT:LEFT);
+        RBNode* uncle = (parent_side ? grand_parent->left: grand_parent->right);
+        if(uncle == NULL || _COLOR_(uncle) == BLACK){
+            size_t child_side = (itr == parent->right? RIGHT:LEFT);
+            RBNode** grand_ref = root;
+            if(grand_parent->parent){
+                grand_ref = _CHILD_REF_PTR_(grand_parent->parent,grand_parent);
+            }
+            if(parent_side == LEFT){
+                if(child_side == RIGHT){
+                    RBT_rotate_left (&(grand_parent->left ));
+                }
+                RBT_rotate_right(grand_ref);
+            } else {
+                if(child_side == LEFT){
+                    RBT_rotate_right(&(grand_parent->right));
+                }
+                RBT_rotate_left(grand_ref);
+            }
+            _SET_BLACK_(*grand_ref);
             _SET_RED_(grand_parent);
             break;
-        }else{
+        } else {
             _SET_BLACK_(uncle);
             _SET_BLACK_(parent);
             parent = grand_parent->parent;
@@ -573,7 +598,7 @@ CASE 9:
         CR    FB                         SB           IB            FB
        X/\X                            X/  \X
                                             FB
-One can observe that the cases with at least 1 cousin(3,4,5,7,8,9) can be solved with the same algorithm.
+One can observe that the cases with at least 1 red cousin(3,4,5,7,8,9) can be solved with the same algorithm.
     *Let COLOR be the color of P.
     *If C is RED then rotate right around S.
     *Rotate left around P.
@@ -629,12 +654,12 @@ void RBT_repair_tree_final(RBNode** root,RBNode* itr){
             }
         }
         if(child_side == LEFT){
-            if(cousin_colors[child_side] == RED){
+            if(cousin_colors[0] == RED){
                 RBT_rotate_right(&(parent->right));
             }
             RBT_rotate_left(parent_ref);
         }else{
-            if(cousin_colors[child_side] == RED){
+            if(cousin_colors[1] == RED){
                 RBT_rotate_left(&(parent->left));
             }
             RBT_rotate_right(parent_ref);
@@ -645,4 +670,123 @@ void RBT_repair_tree_final(RBNode** root,RBNode* itr){
         _SET_BLACK_(parent->right);
         return;
     }
+}
+
+typedef struct RBNode_pair_t{
+    RBNode* first,*second;
+} RBNode_pair;
+
+RBNode_pair RBT_construct_sub_tree_list(RBNode* node,size_t size);
+void RBT_balanced_coloring(RBNode* node, size_t level,size_t remainder);
+
+void RBT_balance(RBTree*tree){
+    //Tree is flattened to an ordered list, left pointer is used for next node(in fact only that can be used);
+    RBNode* list_root = tree->m_root;
+    while(list_root->left) list_root = list_root->left;
+    RBNode* itr = list_root,* next = RBT_advance_node_forward(itr);
+    while(next){
+        _SET_BLACK_(itr);
+        itr->left = next;
+        itr = itr->left;
+        next = RBT_advance_node_forward(next);
+    }
+    //Create balanced tree from the list
+    RBNode_pair tree_empty = RBT_construct_sub_tree_list(list_root,tree->m_size);
+    tree->m_root = tree_empty.first;
+    tree->m_root->parent = NULL;
+    //Color the nodes
+    size_t level = 0, size = tree->m_size;
+    while(size){
+        ++level; size>>=1;
+    }
+    RBT_balanced_coloring(tree->m_root,level,level%2);
+    _SET_BLACK_(tree->m_root);
+}
+
+/*
+    constructs a tree with size amount of nodes from node inclusive, and returns the tree and the rest of the list
+*/
+RBNode_pair RBT_construct_sub_tree_list(RBNode* node,size_t size){
+    if(size == 1){
+        RBNode* tail = node->left;
+        node->left = node->right = NULL;
+        return (RBNode_pair){node,tail};
+    }else if (size == 0){
+        return (RBNode_pair){NULL,node?node->left:NULL};
+    }else{
+        size_t left_size = size/2;
+        size_t right_size = size - 1 - left_size;
+        RBNode_pair left_tree_center = RBT_construct_sub_tree_list(node,left_size );
+        RBNode* center = left_tree_center.second;
+        RBNode_pair right_tree_rest  = RBT_construct_sub_tree_list(center->left,right_size);
+        if((center->right = right_tree_rest.first)) center->right->parent = center;
+        (center->left = left_tree_center.first)->parent = center;
+        return (RBNode_pair){center,right_tree_rest.second};
+    }
+}
+
+/*
+    if level%2 == remainder, then color red;
+*/
+void RBT_balanced_coloring(RBNode* node, size_t level,size_t remainder){
+    _SET_COLOR_(node, (level&1) == remainder ? RED: BLACK );
+    --level;
+    if(node->left) RBT_balanced_coloring(node->left ,level,remainder);
+    if(node->right)RBT_balanced_coloring(node->right,level,remainder);
+}
+
+RBTree* RBT_copy(RBTree* tree,Object* (*copy)(const Object*),void (*destroy)(Object*)){
+    int failure = 0;
+    RBTree* new_tree = (RBTree*) malloc(sizeof(RBTree));
+    if(new_tree == NULL) return NULL;
+    //copy a flattened tree
+    RBNode* root = tree->m_root;
+    while(root->left) root = root->left;
+
+    RBNode* list = (RBNode*) malloc(sizeof(RBNode));
+    if(list == NULL){
+        free(new_tree);return NULL;
+    }
+    list->data = copy(root->data);
+    if(list->data == NULL ){
+        free(list);free(new_tree);return NULL;
+    }
+    root = RBT_advance_node_forward(root);
+    RBNode* itr = list;
+    while(root){
+        itr->left = (RBNode*) malloc(sizeof(RBNode));
+        if(itr->left == NULL){
+            failure = 1; break;
+        }
+        itr->left->data = copy(root->data);
+        if(itr->left->data == NULL){
+            free(itr->left);
+            failure = 1;break;
+        }
+        itr = itr->left;
+        root = RBT_advance_node_forward(root);
+    }
+    itr->left = NULL;
+    if(failure){//delete new tree;
+        while(list){
+            destroy(list->data);
+            root = list;
+            list = list->left;
+            free(root);
+        }
+        free(new_tree);
+        return NULL;
+    }
+    //list is a flattened copy of tree
+    RBNode_pair b_tree = RBT_construct_sub_tree_list(list,tree->m_size);
+
+    size_t level = 0, size = tree->m_size;
+    while(size){
+        ++level; size>>=1;
+    }
+    RBT_balanced_coloring(b_tree.first,level,level%2);
+    *new_tree = *tree;
+    new_tree->m_root = b_tree.first;
+    _SET_BLACK_(new_tree->m_root);
+    return new_tree;
 }
