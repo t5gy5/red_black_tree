@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include "rbtree.h"
 
 #define _CLEAR_(itr) ((RBNode*)((size_t)(itr) & BLACK_MASK))
@@ -11,17 +12,6 @@
 #define _CHILD_REF_PTR_(parent,itr) ((parent)->left == (itr) ? &((parent)->left): &((parent)->right))
 #define _REPAINT_(itr,color) (itr)->parent = (RBNode*)( ((size_t)((itr)->parent)&BLACK_MASK)|(color))
 
-typedef struct RBNode_t{
-    struct RBNode_t *left,*right,*parent;
-    void* data;
-} RBNode;
-
-typedef struct RBTree_t{
-    RBNode *m_root;
-    size_t m_size;
-    const Key* (*get_key)(const Object*);
-    int (*compare)(const Key*,const Key*);
-} RBTree;
 
 static size_t BLACK_MASK = ~1, RED_MASK = 1;
 
@@ -34,7 +24,6 @@ const size_t RBT_SIZE_OFFSET  = (size_t)(&(__temp_tree.m_size)) - (size_t)(&__te
 const size_t RBT_LEFT_OFFSET  = (size_t)(&(__temp_node.left  )) - (size_t)(&__temp_node);
 const size_t RBT_RIGHT_OFFSET = (size_t)(&(__temp_node.right )) - (size_t)(&__temp_node);
 
-const size_t RBT_offset[] = {RBT_LEFT_OFFSET,RBT_RIGHT_OFFSET};
 
 
 int  RBT_insert_node(RBTree*, RBNode**, Object*, RBNode*);
@@ -47,6 +36,21 @@ RBTree* RBT_get(const Key* (*get_key)(const Object*), int (*compare)(const Key*,
     RBTree* This = (RBTree*)malloc(sizeof( RBTree));
     *This = (RBTree){NULL,0,get_key,compare};
     return This;
+}
+
+void RBT_destroy_node(RBNode* node,void (*deallocate)(Object*)){
+    if(node){
+        RBT_destroy_node(node->left,deallocate);
+        RBT_destroy_node(node->right,deallocate);
+        if(deallocate) deallocate(node->data);
+        free(node);
+    }
+
+}
+
+void RBT_destroy(RBTree* tree, void (*deallocate)(Object*)){
+    RBT_destroy_node(tree->m_root,deallocate);
+    free(tree);
 }
 
 size_t RBT_size(RBTree* tree){
@@ -615,7 +619,7 @@ void RBT_repair_tree_final(RBNode** root,RBNode* itr){
     RBNode* grand_parent;
     while(parent){
         size_t child_side = (itr == parent->left? LEFT:RIGHT);
-        RBNode* sibling = *_CHILD_REF_OFFSET_(parent,RBT_offset[child_side^1]);
+        RBNode* sibling = child_side == LEFT? parent->right:parent->left;
         cousin_colors[0] = _COLOR_(sibling->left);
         cousin_colors[1] = _COLOR_(sibling->right);
         if(cousin_colors[0] == BLACK && cousin_colors[1] == BLACK){
@@ -726,7 +730,8 @@ RBNode_pair RBT_construct_sub_tree_list(RBNode* node,size_t size){
 }
 
 /*
-    if level%2 == remainder, then color red;
+    if level%2 == remainder, then color red
+    tree is balanced therefore it has at most [sizeof(void*) * 8] levels, which means recursion is acceptable.
 */
 void RBT_balanced_coloring(RBNode* node, size_t level,size_t remainder){
     _SET_COLOR_(node, (level&1) == remainder ? RED: BLACK );
@@ -787,6 +792,7 @@ RBTree* RBT_copy(RBTree* tree,Object* (*copy)(const Object*),void (*destroy)(Obj
     RBT_balanced_coloring(b_tree.first,level,level%2);
     *new_tree = *tree;
     new_tree->m_root = b_tree.first;
+    new_tree->m_root->parent = NULL;
     _SET_BLACK_(new_tree->m_root);
     return new_tree;
 }
