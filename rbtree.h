@@ -5,8 +5,17 @@
 
 typedef void Key;
 typedef void Object;
-typedef struct RBTree_t RBTree;
-typedef struct RBNode_t RBNode;
+typedef struct RBNode_t{
+    struct RBNode_t *left,*right,*parent;
+    void* data;
+} RBNode;
+
+typedef struct RBTree_t{
+    RBNode *m_root;
+    size_t m_size;
+    const Key* (*get_key)(const Object*);
+    int (*compare)(const Key*,const Key*);
+} RBTree;
 extern const size_t RBT_SIZE_OFFSET;
 #define RBT_SIZE(tree) *(const size_t*)((size_t)(tree)+RBT_SIZE_OFFSET)
 
@@ -27,7 +36,7 @@ typedef struct RBT_Iterator{
 * "get_key" is used to get the pointer to the key from the stored objects.
 * the relation between compare(a,b) and 0 is the same as between a and b.
 */
-RBTree* RBT_get(const Key* (*get_key)(const Object*), int (*compare)(const Key*, const Key*));
+RBTree* RBT_get(const Key* (*get_key)(const Object*), int (*compare)(const Key*,const Key*));
 
 /**
  Frees tree, while in the process applies "deallocate" to the stored objects
@@ -127,10 +136,11 @@ void RBT_balance(RBTree*);
 
 /**
 * Makes a deep copy* of tree.
-* where copy does a deep copy of the stored objects.
+* where copy does a deep copy of the stored objects. copy needs to return NULL in case the copy failed
 * In case of memory allocation error, destroy is used to
 * remove the already copied objects.
 * The copy is not perfect since it will be perfectly balanced.
 */
 RBTree* RBT_copy(RBTree* tree,Object* (*copy)(const Object*),void (*destroy)(Object*));
+
 #endif // RBTREE_H
