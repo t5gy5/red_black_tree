@@ -5,17 +5,13 @@
 
 typedef void Key;
 typedef void Object;
-typedef struct RBNode_t{
-    struct RBNode_t *left,*right,*parent;
-    void* data;
-} RBNode;
 
-typedef struct RBTree_t{
-    RBNode *m_root;
-    size_t m_size;
-    const Key* (*get_key)(const Object*);
-    int (*compare)(const Key*,const Key*);
-} RBTree;
+struct RBNode_t;
+struct RBTree_t;
+
+typedef struct RBNode_t RBNode;
+typedef struct RBTree_t RBTree;
+
 extern const size_t RBT_SIZE_OFFSET;
 #define RBT_SIZE(tree) *(const size_t*)((size_t)(tree)+RBT_SIZE_OFFSET)
 
