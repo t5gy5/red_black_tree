@@ -12,6 +12,17 @@
 #define _CHILD_REF_PTR_(parent,itr) ((parent)->left == (itr) ? &((parent)->left): &((parent)->right))
 #define _REPAINT_(itr,color) (itr)->parent = (RBNode*)( ((size_t)((itr)->parent)&BLACK_MASK)|(color))
 
+typedef struct RBNode_t{
+    struct RBNode_t *left,*right,*parent;
+    void* data;
+} RBNode;
+
+typedef struct RBTree_t{
+    RBNode *m_root;
+    size_t m_size;
+    const Key* (*get_key)(const Object*);
+    int (*compare)(const Key*,const Key*);
+} RBTree;
 
 static size_t BLACK_MASK = ~1, RED_MASK = 1;
 
