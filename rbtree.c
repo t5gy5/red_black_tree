@@ -12,6 +12,10 @@
 #define _CHILD_REF_PTR_(parent,itr) ((parent)->left == (itr) ? &((parent)->left): &((parent)->right))
 #define _REPAINT_(itr,color) (itr)->parent = (RBNode*)( ((size_t)((itr)->parent)&BLACK_MASK)|(color))
 
+
+
+void print_data(FILE*,void*);
+
 typedef struct RBNode_t{
     struct RBNode_t *left,*right,*parent;
     void* data;
@@ -647,26 +651,20 @@ void RBT_repair_tree_final(RBNode** root,RBNode* itr){
                 _SET_RED_(parent);
                 if(child_side == LEFT){
                     RBT_rotate_left(parent_ref);
-                    parent_ref = &(sibling->left);
-                    sibling = parent->right;
-                    cousin_colors[0] = _COLOR_(sibling->left);
                 }else{
                     RBT_rotate_right(parent_ref);
-                    parent_ref = &(sibling->right);
-                    sibling = parent->left;
-                    cousin_colors[1] = _COLOR_(sibling->right);
                 }
+                continue;
             }else{
                 _SET_RED_(sibling);
                 itr = parent;
                 parent = itr->parent;
                 continue;
             }
-        }else{
-            parent_ref = root; grand_parent = _CLEAR_(parent->parent);
-            if(grand_parent){
-                parent_ref = _CHILD_REF_PTR_(grand_parent,parent);
-            }
+        }
+        parent_ref = root; grand_parent = _CLEAR_(parent->parent);
+        if(grand_parent){
+            parent_ref = _CHILD_REF_PTR_(grand_parent,parent);
         }
         if(child_side == LEFT){
             if(cousin_colors[0] == RED){
