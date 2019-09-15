@@ -13,9 +13,6 @@
 #define _REPAINT_(itr,color) (itr)->parent = (RBNode*)( ((size_t)((itr)->parent)&BLACK_MASK)|(color))
 
 
-
-void print_data(FILE*,void*);
-
 typedef struct RBNode_t{
     struct RBNode_t *left,*right,*parent;
     void* data;
@@ -53,18 +50,39 @@ RBTree* RBT_get(const Key* (*get_key)(const Object*), int (*compare)(const Key*,
     return This;
 }
 
-void RBT_destroy_node(RBNode* node,void (*deallocate)(Object*)){
-    if(node){
-        RBT_destroy_node(node->left,deallocate);
-        RBT_destroy_node(node->right,deallocate);
-        if(deallocate) deallocate(node->data);
-        free(node);
+
+static inline RBNode* RBT_post_order_begin_node(RBNode* root){
+    while(root->left || root->right){
+        while(root->left) root = root->left;
+        if(root->right) root = root->right;
     }
+    return root;
+}
+
+static inline RBNode* RBT_post_order_advance_forward_node(RBNode* itr){
+    RBNode* temp_parent = _CLEAR_(itr->parent);
+    if(temp_parent && temp_parent->left == itr){
+        itr = temp_parent->right;
+        if(itr){
+            while(itr->left || itr->right){
+                while(itr->left) itr = itr->left;
+                if(itr->right) itr = itr->right;
+            }
+        }
+        temp_parent = itr;
+    }
+    return temp_parent;
 
 }
 
 void RBT_destroy(RBTree* tree, void (*deallocate)(Object*)){
-    RBT_destroy_node(tree->m_root,deallocate);
+    RBNode* itr = RBT_post_order_begin_node(tree->m_root);
+    while(itr){
+        RBNode* temp = itr;
+        itr = RBT_post_order_advance_forward_node(itr);
+        if(deallocate) deallocate(temp->data);
+        free(temp);
+    }
     free(tree);
 }
 
@@ -690,7 +708,7 @@ typedef struct RBNode_pair_t{
 } RBNode_pair;
 
 RBNode_pair RBT_construct_sub_tree_list(RBNode* node,size_t size);
-void RBT_balanced_coloring(RBNode* node, size_t level,size_t remainder);
+void RBT_balanced_coloring(RBNode* node, size_t remainder);
 
 void RBT_balance(RBTree*tree){
     //Tree is flattened to an ordered list, left pointer is used for next node(in fact only that can be used);
@@ -712,7 +730,7 @@ void RBT_balance(RBTree*tree){
     while(size){
         ++level; size>>=1;
     }
-    RBT_balanced_coloring(tree->m_root,level,level%2);
+    RBT_balanced_coloring(tree->m_root,level%2);
     _SET_BLACK_(tree->m_root);
 }
 
@@ -725,7 +743,7 @@ RBNode_pair RBT_construct_sub_tree_list(RBNode* node,size_t size){
         node->left = node->right = NULL;
         return (RBNode_pair){node,tail};
     }else if (size == 0){
-        return (RBNode_pair){NULL,node?node->left:NULL};
+        return (RBNode_pair){NULL,node};
     }else{
         size_t left_size = size/2;
         size_t right_size = size - 1 - left_size;
@@ -742,11 +760,10 @@ RBNode_pair RBT_construct_sub_tree_list(RBNode* node,size_t size){
     if level%2 == remainder, then color red
     tree is balanced therefore it has at most [sizeof(void*) * 8] levels, which means recursion is acceptable.
 */
-void RBT_balanced_coloring(RBNode* node, size_t level,size_t remainder){
-    _SET_COLOR_(node, (level&1) == remainder ? RED: BLACK );
-    --level;
-    if(node->left) RBT_balanced_coloring(node->left ,level,remainder);
-    if(node->right)RBT_balanced_coloring(node->right,level,remainder);
+void RBT_balanced_coloring(RBNode* node,size_t remainder){
+    if(remainder) _SET_RED_(node);
+    if(node->left) RBT_balanced_coloring(node->left ,!remainder);
+    if(node->right)RBT_balanced_coloring(node->right,!remainder);
 }
 
 RBTree* RBT_copy(RBTree* tree,Object* (*copy)(const Object*),void (*destroy)(Object*)){
@@ -783,7 +800,7 @@ RBTree* RBT_copy(RBTree* tree,Object* (*copy)(const Object*),void (*destroy)(Obj
     itr->left = NULL;
     if(failure){//delete new tree;
         while(list){
-            destroy(list->data);
+            if(destroy) destroy(list->data);
             root = list;
             list = list->left;
             free(root);
@@ -798,10 +815,9 @@ RBTree* RBT_copy(RBTree* tree,Object* (*copy)(const Object*),void (*destroy)(Obj
     while(size){
         ++level; size>>=1;
     }
-    RBT_balanced_coloring(b_tree.first,level,level%2);
+    RBT_balanced_coloring(b_tree.first,level%2);
     *new_tree = *tree;
     new_tree->m_root = b_tree.first;
     new_tree->m_root->parent = NULL;
-    _SET_BLACK_(new_tree->m_root);
     return new_tree;
 }
