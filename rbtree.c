@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <stdio.h>
 #include "rbtree.h"
 
 #define _CLEAR_(itr) ((RBNode*)((size_t)(itr) & BLACK_MASK))
@@ -443,7 +442,7 @@ void RBT_repair_tree_extract(RBNode** root,RBNode* itr){
     //Technically RBT_repair final includes the cases from RBT_repair_lowest_layer given that NULL pointers can be dereferenced.
     //Even if you check for existence of cousins, you only need to do it once, so this is an optimization, and gives cleaner code.
     RBT_Preparation prep = RBT_repair_lowest_layer(root,itr);
-    if(prep.repair_from && prep.repair_futher){
+    if(prep.repair_futher){
         RBT_repair_tree_final(root,prep.repair_from);
     }
 }
@@ -672,34 +671,33 @@ void RBT_repair_tree_final(RBNode** root,RBNode* itr){
                 }else{
                     RBT_rotate_right(parent_ref);
                 }
-                continue;
             }else{
                 _SET_RED_(sibling);
                 itr = parent;
                 parent = itr->parent;
-                continue;
             }
-        }
-        parent_ref = root; grand_parent = _CLEAR_(parent->parent);
-        if(grand_parent){
-            parent_ref = _CHILD_REF_PTR_(grand_parent,parent);
-        }
-        if(child_side == LEFT){
-            if(cousin_colors[0] == RED){
-                RBT_rotate_right(&(parent->right));
-            }
-            RBT_rotate_left(parent_ref);
         }else{
-            if(cousin_colors[1] == RED){
-                RBT_rotate_left(&(parent->left));
+            parent_ref = root; grand_parent = _CLEAR_(parent->parent);
+            if(grand_parent){
+                parent_ref = _CHILD_REF_PTR_(grand_parent,parent);
             }
-            RBT_rotate_right(parent_ref);
+            if(child_side == LEFT){
+                if(cousin_colors[0] == RED){
+                    RBT_rotate_right(&(parent->right));
+                }
+                RBT_rotate_left(parent_ref);
+            }else{
+                if(cousin_colors[1] == RED){
+                    RBT_rotate_left(&(parent->left));
+                }
+                RBT_rotate_right(parent_ref);
+            }
+            _REPAINT_(*parent_ref,_COLOR_(parent));
+            parent = *parent_ref;
+            _SET_BLACK_(parent->left);
+            _SET_BLACK_(parent->right);
+            return;
         }
-        _REPAINT_(*parent_ref,_COLOR_(parent));
-        parent = *parent_ref;
-        _SET_BLACK_(parent->left);
-        _SET_BLACK_(parent->right);
-        return;
     }
 }
 
@@ -821,3 +819,4 @@ RBTree* RBT_copy(RBTree* tree,Object* (*copy)(const Object*),void (*destroy)(Obj
     new_tree->m_root->parent = NULL;
     return new_tree;
 }
+
