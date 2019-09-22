@@ -20,7 +20,8 @@ extern const size_t RBT_SIZE_OFFSET;
 * Modifying the key part of data pointed by the iterator corrupts the structure.
 * For the ease of assignment nothing is const, but modify nothing.
 * the iterator is for accessing the data only, and nothing else.
-* iterator reached the end iff data == NULL
+* iterator reached the end iff data == NULL.
+* iterating over the tree: for(RBNode* itr = RBT_begin(tree);itr->data;itr = RBT_advance(itr,1)){}
 */
 typedef struct RBT_Iterator{
     Object*  data;
@@ -67,26 +68,24 @@ Object* RBT_at(RBTree*tree, const Key*key);
 RBT_Iterator RBT_search(RBTree*,const Key*);
 
 /**
-* Returns given pointer if successful, otherwise gives the pointer
-* to the object that obstructed the insertion.
-* Returns NULL if memory allocation for Node failed.
-* Invalidates any existing RBT_Iterators
+* Returns iterator to the inserted object, or
+* the iterator of the object that obstructed the insertion.
+* Returns NULL iterator if memory allocation for Node failed.
 * Not thread safe.
 */
-Object* RBT_insert(RBTree*,Object*);
+RBT_Iterator RBT_insert(RBTree*,Object*);
 
 /**
-* Given an  insertion iterator from RBT_search inserts the object, and returns the pointer to it, iff successful.
-* Given anything else does nothing and return NULL.
-* Successful insertion invalidates any RBT_Iterator.
+* Given an  insertion iterator from RBT_search inserts the object, and returns the iterator to it, iff successful.
+* Given anything else does nothing and return NULL iterator.
 * Not thread safe.
 */
-Object* RBT_insert_itr(RBTree*,RBT_Iterator,Object*);
+RBT_Iterator RBT_insert_itr(RBTree*,RBT_Iterator,Object*);
 
 /**
 * Deletes the corresponding Node and return the pointer to the object.
 * Returns NULL if there is no corresponding object.
-* Successful extraction invalidates any RBT_Iterator.
+* Successful extraction may invalidate existing RBT_Iterators.
 * Not thread safe.
 */
 Object* RBT_exract(RBTree*,const Key*);
@@ -94,7 +93,7 @@ Object* RBT_exract(RBTree*,const Key*);
 /**
 * Deletes the corresponding Node and return the pointer to the object.
 * Returns NULL if the iterator is invalid(data is NULL, or current is NULL).
-* Successful extraction invalidates any RBT_Iterator.
+* Successful extraction may invalidate existing RBT_Iterators.
 * Not thread safe.
 */
 Object* RBT_exract_itr(RBTree*,RBT_Iterator);
