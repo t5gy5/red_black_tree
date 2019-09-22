@@ -37,7 +37,7 @@ const size_t RBT_RIGHT_OFFSET = (size_t)(&(__temp_node.right )) - (size_t)(&__te
 
 
 
-int  RBT_insert_node(RBTree*, RBNode**, Object*, RBNode*);
+RBNode*  RBT_insert_node(RBTree*, RBNode**, Object*, RBNode*);
 void RBT_delete_node(RBTree*,RBNode*);
 void RBT_repair_tree_insert (RBNode**, RBNode*);
 static inline void RBT_repair_tree_extract(RBNode** root, RBNode* itr);
@@ -225,7 +225,7 @@ RBT_Iterator RBT_search(RBTree* tree, const Key* key){
     return (RBT_Iterator){NULL, (RBNode*)((size_t)parent | direction | 2)};
 }
 
-Object* RBT_insert(RBTree* tree, Object* obj){
+RBT_Iterator RBT_insert(RBTree* tree, Object* obj){
     RBNode** itr = &(tree->m_root);
     RBNode* parent = NULL;
     const Key* key = tree->get_key(obj);
@@ -237,10 +237,11 @@ Object* RBT_insert(RBTree* tree, Object* obj){
         }else if (compare > 0) {
             itr = &(parent->right);
         }else{
-            return parent->data;
+            return (RBT_Iterator){parent->data,parent};
         }
     }
-    return RBT_insert_node(tree,itr,obj,parent)? obj : NULL;
+    RBNode* inserted = RBT_insert_node(tree,itr,obj,parent);
+    return (RBT_Iterator){inserted?obj:NULL,inserted};
 }
 
 Object* RBT_exract(RBTree* tree, const Key* key){
@@ -262,7 +263,7 @@ Object* RBT_exract(RBTree* tree, const Key* key){
     return NULL;
 }
 
-Object* RBT_insert_itr(RBTree* tree, RBT_Iterator ptr, Object* obj){
+RBT_Iterator RBT_insert_itr(RBTree* tree, RBT_Iterator ptr, Object* obj){
     size_t option_et_ptr = (size_t)(ptr.current);
     if(ptr.data == NULL && (option_et_ptr & 2)){
         //itr comes from RBT_search with the location of insertion
@@ -274,9 +275,10 @@ Object* RBT_insert_itr(RBTree* tree, RBT_Iterator ptr, Object* obj){
         }else{
             itr = &(tree->m_root);
         }
-        return RBT_insert_node(tree,itr,obj,itr_p) ? obj : NULL;
+        RBNode* inserted = RBT_insert_node(tree,itr,obj,itr_p);
+        return (RBT_Iterator){inserted?obj:NULL,inserted};
     }else{//Iterator doesn't come from RBT_search
-        return NULL;
+        return (RBT_Iterator){NULL,NULL};
     }
 }
 
@@ -290,7 +292,7 @@ Object* RBT_exract_itr(RBTree* tree, RBT_Iterator itr){
     return itr.data;
 }
 
-int RBT_insert_node(RBTree* tree,RBNode**itr, Object* obj,RBNode* parent){
+RBNode* RBT_insert_node(RBTree* tree,RBNode**itr, Object* obj,RBNode* parent){
     *itr = (RBNode*)malloc(sizeof(RBNode));
     if(*itr){
         ++tree->m_size;
@@ -300,9 +302,9 @@ int RBT_insert_node(RBTree* tree,RBNode**itr, Object* obj,RBNode* parent){
             RBT_repair_tree_insert(&(tree->m_root),*itr);
         }
     }else{//Out of memory
-        return 0;
+        return NULL;
     }
-    return 1;
+    return *itr;
 }
 
 void RBT_delete_node(RBTree*tree,RBNode* itr){
@@ -449,7 +451,7 @@ void RBT_repair_tree_extract(RBNode** root,RBNode* itr){
 
 /**
 * Constructs a left biased balanced tree, from the given array of nodes
-* and return a pointer to the root of said tree.
+* and returns a pointer to the root of said tree.
 */
 RBNode* RBT_construct_sub_tree_from(RBNode* array[8],int left,int right){
     if(left == right){
@@ -660,7 +662,7 @@ void RBT_repair_tree_final(RBNode** root,RBNode* itr){
                 _SET_RED_(sibling);
                 return;
             }else if(_COLOR_(sibling) == RED){
-                parent_ref = root; grand_parent = _CLEAR_(parent->parent);
+                parent_ref = root; grand_parent = parent->parent;
                 if(grand_parent){
                     parent_ref = _CHILD_REF_PTR_(grand_parent,parent);
                 }
@@ -734,6 +736,7 @@ void RBT_balance(RBTree*tree){
 
 /*
     constructs a tree with size amount of nodes from node inclusive, and returns the tree and the rest of the list
+    .left points to the next element in he list
 */
 RBNode_pair RBT_construct_sub_tree_list(RBNode* node,size_t size){
     if(size == 1){
@@ -819,4 +822,3 @@ RBTree* RBT_copy(RBTree* tree,Object* (*copy)(const Object*),void (*destroy)(Obj
     new_tree->m_root->parent = NULL;
     return new_tree;
 }
-
