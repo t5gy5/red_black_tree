@@ -1,4 +1,4 @@
-#include <stdlib.h>
+#include <stdlib.h> //for malloc and free
 #include "rbtree.h"
 
 #define _CLEAR_(itr) ((RBNode*)((size_t)(itr) & BLACK_MASK))
@@ -10,7 +10,6 @@
 #define _CHILD_REF_OFFSET_(itr,offset) (RBNode**)((size_t)(itr)+(offset))
 #define _CHILD_REF_PTR_(parent,itr) ((parent)->left == (itr) ? &((parent)->left): &((parent)->right))
 #define _REPAINT_(itr,color) (itr)->parent = (RBNode*)( ((size_t)((itr)->parent)&BLACK_MASK)|(color))
-
 
 typedef struct RBNode_t{
     struct RBNode_t *left,*right,*parent;
@@ -39,6 +38,7 @@ const size_t RBT_RIGHT_OFFSET = (size_t)(&(__temp_node.right )) - (size_t)(&__te
 
 RBNode*  RBT_insert_node(RBTree*, RBNode**, Object*, RBNode*);
 void RBT_delete_node(RBTree*,RBNode*);
+RBNode* RBT_delete_node_next(RBTree*,RBNode*);
 void RBT_repair_tree_insert (RBNode**, RBNode*);
 static inline void RBT_repair_tree_extract(RBNode** root, RBNode* itr);
 
@@ -244,7 +244,7 @@ RBT_Iterator RBT_insert(RBTree* tree, Object* obj){
     return (RBT_Iterator){inserted?obj:NULL,inserted};
 }
 
-Object* RBT_exract(RBTree* tree, const Key* key){
+Object* RBT_extract(RBTree* tree, const Key* key){
     //Find node
     Object* ret = NULL;
     RBNode* itr = tree->m_root;
@@ -283,9 +283,38 @@ RBT_Iterator RBT_insert_itr(RBTree* tree, RBT_Iterator ptr, Object* obj){
 }
 
 
-Object* RBT_exract_itr(RBTree* tree, RBT_Iterator itr){
+Object* RBT_extract_itr(RBTree* tree, RBT_Iterator itr){
     if(itr.data && itr.current){
         RBT_delete_node(tree,itr.current);
+    }else{
+        return NULL;
+    }
+    return itr.data;
+}
+
+Object* RBT_extract_next(RBTree* tree,const Key*key,RBT_Iterator* next){
+    Object* ret = NULL;
+    RBNode* itr = tree->m_root;
+    while(itr){
+        int compare = tree->compare(key,tree->get_key(itr->data));
+        if(compare<0){
+            itr = itr->left;
+        }else if(compare>0){
+            itr = itr->right;
+        }else{
+            ret = itr->data;
+            next->current = RBT_delete_node_next(tree,itr);
+            next->data = next->current? next->current->data : NULL;
+            return ret;
+        }
+    }
+    return NULL;
+
+}
+Object* RBT_extract_next_itr(RBTree* tree,RBT_Iterator itr,RBT_Iterator* next){
+    if(itr.data && itr.current){
+        next->current = RBT_delete_node_next(tree,itr.current);
+        next->data = next->current? next->current->data : NULL;
     }else{
         return NULL;
     }
@@ -341,6 +370,45 @@ void RBT_delete_node(RBTree*tree,RBNode* itr){
         tree->m_root = NULL;
     }
     free(itr);
+}
+
+/*
+in case not the values are copied but the connection are changed
+getting the next is trivial by ret = RBT_advance_node_forward(itr), at the beginning.
+*/
+
+RBNode* RBT_delete_node_next(RBTree*tree,RBNode* itr){
+    RBNode* ret=NULL;
+    --tree->m_size;
+    RBNode* temp = itr->right;
+    if(temp){
+        ret = itr;
+        while(temp->left) temp = temp->left;
+        itr->data = temp->data;
+        itr = temp;
+    }
+    temp = (itr->left ? itr->left : itr->right);
+    if(temp){
+        if(ret==NULL) ret = RBT_advance_node_forward(itr);
+        itr->data = temp->data;
+        itr = temp;
+    }
+    temp = _CLEAR_(itr->parent);
+    if(temp){
+        if(ret==NULL) ret = RBT_advance_node_forward(itr);
+        if(temp->left == itr){
+            temp->left = NULL;
+        }else{
+            temp->right = NULL;
+        }
+        if(_COLOR_(itr) == BLACK){
+            RBT_repair_tree_extract(&(tree->m_root),temp);
+        }
+    }else{
+        tree->m_root = NULL;
+    }
+    free(itr);
+    return ret;
 }
 
 #define __RBT__ROTATE__(itr,left,right)\
