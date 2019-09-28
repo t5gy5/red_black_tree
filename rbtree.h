@@ -76,9 +76,9 @@ RBT_Iterator RBT_search(RBTree*,const Key*);
 RBT_Iterator RBT_insert(RBTree*,Object*);
 
 /**
-* Given an  insertion iterator from RBT_search inserts the object, and returns the iterator to it, iff successful.
-* Given anything else does nothing and return NULL iterator.
-* Not thread safe.
+* Given an  insertion iterator from RBT_search inserts the object.
+* if it's not an insertion iterator, then it's a hint for the search algorithm(to be implemented)
+* not thread safe
 */
 RBT_Iterator RBT_insert_itr(RBTree*,RBT_Iterator,Object*);
 
@@ -88,7 +88,17 @@ RBT_Iterator RBT_insert_itr(RBTree*,RBT_Iterator,Object*);
 * Successful extraction may invalidate existing RBT_Iterators.
 * Not thread safe.
 */
-Object* RBT_exract(RBTree*,const Key*);
+Object* RBT_extract(RBTree*,const Key*);
+
+/**
+* Deletes the corresponding Node and returns the pointer to the object,
+* and iterator(with the 3rd arg) to the successor of the deleted object.
+* Returns NULL if there is no corresponding object, and in this case leaves
+* the 3rd arg unchanged
+* Successful extraction may invalidate existing RBT_Iterators.
+* Not thread safe.
+*/
+Object* RBT_extract_next(RBTree*,const Key*,RBT_Iterator*);
 
 /**
 * Deletes the corresponding Node and return the pointer to the object.
@@ -96,7 +106,18 @@ Object* RBT_exract(RBTree*,const Key*);
 * Successful extraction may invalidate existing RBT_Iterators.
 * Not thread safe.
 */
-Object* RBT_exract_itr(RBTree*,RBT_Iterator);
+Object* RBT_extract_itr(RBTree*,RBT_Iterator);
+
+/**
+* Deletes the corresponding Node and returns the pointer to the object,
+* and iterator(with the 3rd arg) to the successor of the deleted object.
+* Returns NULL if the iterator is invalid(data is NULL, or current is NULL),
+* and in this case leaves the 3rd arg unchanged.
+* Successful extraction may invalidate existing RBT_Iterators.
+* Not thread safe.
+* Usefull for removing elements of the tree in an iterative fashion
+*/
+Object* RBT_extract_next_itr(RBTree*,RBT_Iterator,RBT_Iterator*);
 
 /**
 * Gives iterator to smallest element
